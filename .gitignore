@@ -1,0 +1,12 @@
+/Code/*
+# .c和.h都不忽略
+!/Code/*.[ch]
+# flex和bison的中间文件忽略
+/Code/lex.yy.c
+/Code/syntax.tab.*
+
+!/Code/lexical.l
+!/Code/syntax.y
+!/Code/Makefile
+
+*.pdf
