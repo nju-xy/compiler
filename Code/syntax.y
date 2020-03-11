@@ -34,7 +34,7 @@
 %token LP RP LB RB LC RC
 %token STRUCT RETURN IF ELSE WHILE
 
-/* 结合性和优先级 (这里还缺了MINUS作为取负的时候) */
+/* 结合性和优先级, 越下面优先级越高 */
 %right ASSIGNOP
 %left OR
 %left AND
@@ -47,16 +47,19 @@
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 
+
+
 %%
 /* High-level Definitions */
 Program: ExtDefList
     ;
-ExtDefList: /* empty */
+ExtDefList: 
     | ExtDef ExtDefList
     ;
 ExtDef: Specifier ExtDecList SEMI
     | Specifier SEMI
     | Specifier FunDec CompSt
+    | error SEMI
     ;
 ExtDecList: VarDec
     | VarDec COMMA ExtDecList
@@ -68,8 +71,9 @@ Specifier: TYPE
     ;
 StructSpecifier: STRUCT OptTag LC DefList RC
     | STRUCT Tag
+    | STRUCT OptTag LC error RC
     ;
-OptTag: /* empty */
+OptTag: 
     | ID
     ;
 Tag: ID
@@ -78,9 +82,11 @@ Tag: ID
 /* Declarators */
 VarDec: ID
     | VarDec LB INT RB
+    | VarDec LB error RB
     ;
 FunDec: ID LP VarList RP
     | ID LP RP
+    | ID LP error RP
     ;
 VarList: ParamDec COMMA VarList
     | ParamDec
@@ -89,24 +95,32 @@ ParamDec: Specifier VarDec
     ;
 
 /* Statements */
+/* 这里碰到的问题是某些难以判断的error SEMI应该是Stmt还是Def(暂时先都当做Def) */
 CompSt: LC DefList StmtList RC
+    | LC error RC
     ;
-StmtList: /* empty */
-    | Stmt StmtList
+StmtList: 
+    | Stmt StmtList 
     ;
 Stmt: Exp SEMI
     | CompSt
     | RETURN Exp SEMI
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP Stmt ELSE Stmt
+    | IF LP error RP Stmt %prec LOWER_THAN_ELSE
+    | IF LP error RP Stmt ELSE Stmt
     | WHILE LP Exp RP Stmt
+    | WHILE LP error RP Stmt
+    | RETURN error SEMI 
     ;
 
 /* Local Definitions */
-DefList: /* empty */
-    | Def DefList
+DefList: 
+    | Def DefList 
     ;
 Def: Specifier DecList SEMI
+    | Specifier error SEMI 
+    | error SEMI
     ;
 DecList: Dec
     | Dec COMMA DecList
@@ -125,11 +139,14 @@ Exp: Exp ASSIGNOP Exp
     | Exp STAR Exp
     | Exp DIV Exp
     | LP Exp RP
+    | LP error RP
     | MINUS Exp %prec NEG
     | NOT Exp
     | ID LP Args RP
     | ID LP RP
+    | ID LP error RP
     | Exp LB Exp RB
+    | Exp LB error RB
     | Exp DOT ID
     | ID
     | INT
