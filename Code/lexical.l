@@ -1,9 +1,13 @@
 %option yylineno
 %{
-    #include <stdio.h>
+    #include "syntax.tab.h"
+    #include "common.h"
+    #define YY_USER_ACTION \
+        yylloc.first_line = yylloc.last_line = yylineno;
     void multiline_comment();
 %}
-delim   [ \t\n\r]
+
+delim   [ \n\t\r]
 ws      {delim}+
 letter  [A-Za-z]
 letter_  [A-Za-z_]
@@ -39,130 +43,168 @@ lcomment    \/\*
 {wrong_dec} {   printf("Error type A at Line %d: Wrong int(dec) \'%s\'\n", yylineno, yytext); }
 {dec}       {   int ret;    
                 sscanf(yytext, "%d", &ret);
-                // printf("INT(DEC):%d ", ret);  
-                yylval.type_int = ret;
+                // printf("INT(DEC):%d ", ret); 
+                yylval.node = create_node("INT", yylineno, 1); 
+                yylval.node->val.type_int = ret;
                 return INT;
             }
 {wrong_hex} {   printf("Error type A at Line %d: Wrong int(hex) \'%s\'\n", yylineno, yytext); }
 {hex}       {   int ret;    
                 sscanf(yytext, "%x", &ret);
                 // printf("INT(HEX):%d ", ret);  
-                yylval.type_int = ret; 
+                yylval.node = create_node("INT", yylineno, 1); 
+                yylval.node->val.type_int = ret;
                 return INT;
             }
 {wrong_oct} {   printf("Error type A at Line %d: Wrong int(oct) \'%s\'\n", yylineno, yytext); }
 {oct}       {   int ret;    
                 sscanf(yytext, "%o", &ret);
                 // printf("INT(OCT):%d ", ret);   
-                yylval.type_int = ret;  
+                yylval.node = create_node("INT", yylineno, 1); 
+                yylval.node->val.type_int = ret;
                 return INT;
             }
 {wrong_float} { printf("Error type A at Line %d: Wrong float \'%s\'\n", yylineno, yytext); }
 {float}     {   float ret;    
                 sscanf(yytext, "%f", &ret);
                 //printf("FLOAT:%f ", ret);    
-                yylval.type_float = ret;
+                yylval.node = create_node("FLOAT", yylineno, 1); 
+                yylval.node->val.type_float = ret;
+                // yylval.node->val.type_float = atof(yytext);
                 return FLOAT;
             }
-";"         {   //printf("SEMI ");
+";"         {   //printf("SEMI "); 
+                yylval.node = create_node("SEMI", yylineno, 1); 
                 return SEMI;
             }
-","         {   //printf("COMMA ");
+","         {   //printf("COMMA "); 
+                yylval.node = create_node("COMMA", yylineno, 1); 
                 return COMMA;    
             }
-"="         {   //printf("ASSIGNOP "); 
+"="         {   //printf("ASSIGNOP ");  
+                yylval.node = create_node("ASSIGNOP", yylineno, 1); 
                 return ASSIGNOP;    
             }
 "<"         {   //printf("RELOP ");
-                yylval.type_relop = LT;
+                yylval.node = create_node("RELOP", yylineno, 1); 
+                yylval.node->val.type_relop = LT; 
                 return RELOP;    
             }
 ">"         {   //printf("RELOP ");
-                yylval.type_relop = GT;
+                yylval.node = create_node("RELOP", yylineno, 1); 
+                yylval.node->val.type_relop = GT; 
                 return RELOP;    
             }
 "<="        {   //printf("RELOP ");
-                yylval.type_relop = LE;
+                yylval.node = create_node("RELOP", yylineno, 1); 
+                yylval.node->val.type_relop = LE; 
                 return RELOP;    
             }
 ">="        {   //printf("RELOP "); 
-                yylval.type_relop = GE;
+                yylval.node = create_node("RELOP", yylineno, 1); 
+                yylval.node->val.type_relop = GE; 
                 return RELOP;    
             }
 "=="        {   //printf("RELOP ");
-                yylval.type_relop = EQ;
+                yylval.node = create_node("RELOP", yylineno, 1); 
+                yylval.node->val.type_relop = EQ; 
                 return RELOP;    
             }
 "!="        {   //printf("RELOP ");
-                yylval.type_relop = NE;
+                yylval.node = create_node("RELOP", yylineno, 1); 
+                yylval.node->val.type_relop = NE; 
                 return RELOP;    
             }
-"+"         {   //printf("PLUS ");
+"+"         {   //printf("PLUS "); 
+                yylval.node = create_node("PLUS", yylineno, 1); 
                 return PLUS;    
             }
-"-"         {   //printf("MINUS ");
+"-"         {   //printf("MINUS "); 
+                yylval.node = create_node("MINUS", yylineno, 1); 
                 return MINUS;    
             }
-"*"         {   //printf("STAR ");               
+"*"         {   //printf("STAR ");    
+                yylval.node = create_node("STAR", yylineno, 1); 
                 return STAR;    
             }
-"/"         {   //printf("DIV ");       
+"/"         {   //printf("DIV ");    
+                yylval.node = create_node("DIV", yylineno, 1);     
                 return DIV;
             }
-"&&"        {   //printf("AND ");       
+"&&"        {   //printf("AND ");   
+                yylval.node = create_node("AND", yylineno, 1);      
                 return AND;    
             }
-"||"        {   //printf("OR ");       
+"||"        {   //printf("OR ");   
+                yylval.node = create_node("OR", yylineno, 1);      
                 return OR;    
             }
-"."         {   //printf("DOT ");       
+"."         {   //printf("DOT ");  
+                yylval.node = create_node("DOT", yylineno, 1);       
                 return DOT;    
             }
-"!"         {   //printf("NOT ");       
+"!"         {   //printf("NOT ");    
+                yylval.node = create_node("NOT", yylineno, 1);     
                 return NOT;    
             }
-"int"       {   //printf("TYPE ");  
-                yylval.type_type = TYPE_INT;      
+"int"       {   //printf("TYPE ");    
+                yylval.node = create_node("TYPE", yylineno, 1);
+                yylval.node->val.type_type = TYPE_INT;      
                 return TYPE;    
             }
-"float"     {   //printf("TYPE ");   
-                yylval.type_type = TYPE_FLOAT;     
+"float"     {   //printf("TYPE ");     
+                yylval.node = create_node("TYPE", yylineno, 1);
+                yylval.node->val.type_type = TYPE_FLOAT;     
                 return TYPE;    
             }
-"("         {   //printf("LP ");       
+"("         {   //printf("LP ");        
+                yylval.node = create_node("LP", yylineno, 1);
                 return LP;    
             }
 ")"         {   //printf("RP ");       
+                yylval.node = create_node("RP", yylineno, 1);
                 return RP;    
             }
 "["         {   //printf("LB ");       
+                yylval.node = create_node("LB", yylineno, 1);
                 return LB;    
             }
-"]"         {   //printf("RB ");       
+"]"         {   //printf("RB ");     
+                yylval.node = create_node("RB", yylineno, 1);
                 return RB;    
             }
-"{"         {   //printf("LC ");       
+"{"         {   //printf("LC ");    
+                yylval.node = create_node("LC", yylineno, 1);
                 return LC;    
             }
-"}"         {   //printf("RC ");       
+"}"         {   //printf("RC ");     
+                yylval.node = create_node("RC", yylineno, 1);
                 return RC;    
             }
-"struct"    {   //printf("STRUCT ");       
+"struct"    {   //printf("STRUCT ");    
+                yylval.node = create_node("STRUCT", yylineno, 1);     
                 return STRUCT;    
             }
-"return"    {   //printf("RETURN ");       
+"return"    {   //printf("RETURN ");    
+                yylval.node = create_node("RETURN", yylineno, 1);  
                 return RETURN;    
             }
-"if"        {   //printf("IF ");       
+"if"        {   //printf("IF ");      
+                yylval.node = create_node("IF", yylineno, 1);
                 return IF;    
             }
-"else"      {   //printf("ELSE ");       
+"else"      {   //printf("ELSE ");     
+                yylval.node = create_node("ELSE", yylineno, 1);   
                 return ELSE;    
             }
-"while"     {   //printf("WHILE ");       
+"while"     {   //printf("WHILE ");      
+                yylval.node = create_node("WHILE", yylineno, 1);
                 return WHILE;    
             }
-{id}        {   //printf("ID ");       
+{id}        {   // printf("ID : %s", yytext);        
+                yylval.node = create_node("ID", yylineno, 1);
+                yylval.node->val.id_name = (char *)malloc(sizeof(yytext));
+                strcpy(yylval.node->val.id_name, yytext);
                 return ID;    
             }
 .           {   printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext); } 

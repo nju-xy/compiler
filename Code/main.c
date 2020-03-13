@@ -1,7 +1,11 @@
-#include <stdio.h>
+#include "common.h"
 
-// extern int yyrestart(FILE * f);
-// extern int yyparse();
+extern int yyrestart(FILE * f);
+extern int yyparse();
+
+void init() {
+    error_flag = 0;
+}
 
 int main(int argc, char ** argv) {
     if(argc <= 1) return 1;
@@ -10,8 +14,13 @@ int main(int argc, char ** argv) {
         perror(argv[1]);
         return 1;
     }
+    
+    init();
     yyrestart(f);
     yyparse();
+    if(!error_flag) {
+        draw_tree(root, 0);
+    }
     return 0;
 }
 // extern FILE* yyin;
