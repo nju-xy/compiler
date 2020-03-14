@@ -40,7 +40,11 @@ lcomment    \/\*
 {lcomment}  {   // printf("COMMENT ");  
                 multiline_comment();        
             }
-{wrong_dec} {   printf("Error type A at Line %d: Wrong int(dec) \'%s\'\n", yylineno, yytext); }
+{wrong_dec} {   
+                fprintf(stderr, "Error type A at Line %d: Wrong int(dec) \'%s\'.\n", yylineno, yytext); 
+                error_flag = 1;
+                return INT;
+            }
 {dec}       {   int ret;    
                 sscanf(yytext, "%d", &ret);
                 // printf("INT(DEC):%d ", ret); 
@@ -48,7 +52,11 @@ lcomment    \/\*
                 yylval.node->val.type_int = ret;
                 return INT;
             }
-{wrong_hex} {   printf("Error type A at Line %d: Wrong int(hex) \'%s\'\n", yylineno, yytext); }
+{wrong_hex} {   
+                fprintf(stderr, "Error type A at Line %d: Wrong int(hex) \'%s\'.\n", yylineno, yytext); 
+                error_flag = 1;
+                return INT;
+            }
 {hex}       {   int ret;    
                 sscanf(yytext, "%x", &ret);
                 // printf("INT(HEX):%d ", ret);  
@@ -56,7 +64,11 @@ lcomment    \/\*
                 yylval.node->val.type_int = ret;
                 return INT;
             }
-{wrong_oct} {   printf("Error type A at Line %d: Wrong int(oct) \'%s\'\n", yylineno, yytext); }
+{wrong_oct} {   
+                fprintf(stderr, "Error type A at Line %d: Wrong int(oct) \'%s\'.\n", yylineno, yytext); 
+                error_flag = 1;  
+                return INT;  
+            }
 {oct}       {   int ret;    
                 sscanf(yytext, "%o", &ret);
                 // printf("INT(OCT):%d ", ret);   
@@ -64,7 +76,11 @@ lcomment    \/\*
                 yylval.node->val.type_int = ret;
                 return INT;
             }
-{wrong_float} { printf("Error type A at Line %d: Wrong float \'%s\'\n", yylineno, yytext); }
+{wrong_float} { 
+                fprintf(stderr, "Error type A at Line %d: Wrong float \'%s\'.\n", yylineno, yytext); 
+                error_flag = 1;
+                return FLOAT;
+            }
 {float}     {   float ret;    
                 sscanf(yytext, "%f", &ret);
                 //printf("FLOAT:%f ", ret);    
@@ -207,7 +223,10 @@ lcomment    \/\*
                 strcpy(yylval.node->val.id_name, yytext);
                 return ID;    
             }
-.           {   printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext); } 
+.           {   
+                fprintf(stderr, "Error type A at Line %d: Mysterious characters \'%s\'.\n", yylineno, yytext); 
+                error_flag = 1;
+            } 
 %%
     /*用户自定义代码部分*/
 void multiline_comment() {
@@ -217,7 +236,8 @@ void multiline_comment() {
         pre = cur; 
         cur = input();
         if(cur == '\0') {
-            printf("\nError type A at Line %d: unterminated comment\n", yylineno);
+            fprintf(stderr, "Error type A at Line %d: unterminated comment.\n", yylineno);
+            error_flag = 1;
             break;
         }
     }

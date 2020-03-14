@@ -1,4 +1,5 @@
 %locations
+%error-verbose
 %{
     /* for debugging */
     // #define YYDEBUG 1
@@ -64,7 +65,7 @@ ExtDef: Specifier ExtDecList SEMI {
         add_children($$, 3, $1, $2, $3);
     }
     | error SEMI { 
-        yyerror("Wrong ExtDef"); 
+        yyerror2("Wrong ExtDef"); 
     }
     ;
 ExtDecList: VarDec {
@@ -96,7 +97,7 @@ StructSpecifier: STRUCT OptTag LC DefList RC {
         add_children($$, 2, $1, $2);
     }
     | STRUCT OptTag LC error RC { 
-        yyerror("Wrong StructSpecifier"); 
+        yyerror2("Wrong StructSpecifier"); 
     }
     ;
 OptTag: /* empty */ {
@@ -122,9 +123,6 @@ VarDec: ID {
         $$ = create_node("VarDec", @1.first_line, 0);
         add_children($$, 4, $1, $2, $3, $4);
     }
-    | VarDec LB error RB { 
-        yyerror("Wrong VarDec"); 
-    }
     ;
 FunDec: ID LP VarList RP {
         $$ = create_node("FunDec", @1.first_line, 0);
@@ -135,7 +133,7 @@ FunDec: ID LP VarList RP {
         add_children($$, 3, $1, $2, $3);
     }
     | ID LP error RP { 
-        yyerror("Wrong FunDec"); 
+        yyerror2("Wrong FunDec"); 
     }
     ;
 VarList: ParamDec COMMA VarList {
@@ -160,7 +158,7 @@ CompSt: LC DefList StmtList RC {
         add_children($$, 4, $1, $2, $3, $4);
     }
     | LC error RC { 
-        yyerror("Wrong CompSt"); 
+        yyerror2("Wrong CompSt"); 
     }
     ;
 StmtList: /* empty */ {
@@ -183,29 +181,44 @@ Stmt: Exp SEMI {
         $$ = create_node("Stmt", @1.first_line, 0);
         add_children($$, 3, $1, $2, $3);
     }
+    | RETURN error SEMI  {
+        yyerror2("Wrong return value");
+    }
+    | RETURN Exp error  {
+        yyerror2("Missing SEMI after return");
+    }
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {
         $$ = create_node("Stmt", @1.first_line, 0);
         add_children($$, 5, $1, $2, $3, $4, $5);
+    }
+    | IF LP error RP Stmt %prec LOWER_THAN_ELSE { 
+        yyerror2("Wrong If condition"); 
+    }
+    | IF LP Exp RP error %prec LOWER_THAN_ELSE { 
+        yyerror2("Wrong If condition"); 
     }
     | IF LP Exp RP Stmt ELSE Stmt {
         $$ = create_node("Stmt", @1.first_line, 0);
         add_children($$, 7, $1, $2, $3, $4, $5, $6, $7);
     }
-    | IF LP error RP Stmt %prec LOWER_THAN_ELSE { 
-        yyerror("Wrong If condition"); 
-    }
     | IF LP error RP Stmt ELSE Stmt { 
-        yyerror("Wrong If condition"); 
+        yyerror2("Wrong If condition"); 
+    }
+    | IF LP Exp RP error ELSE Stmt {
+        yyerror2("Wrong if stmt");
+    }
+    | IF LP Exp RP Stmt ELSE error {
+        yyerror2("Wrong else stmt");
     }
     | WHILE LP Exp RP Stmt {
         $$ = create_node("Stmt", @1.first_line, 0);
         add_children($$, 5, $1, $2, $3, $4, $5);
     }
     | WHILE LP error RP Stmt {
-        yyerror("Wrong while condition");
+        yyerror2("Wrong while condition");
     }
-    | RETURN error SEMI  {
-        yyerror("Wrong return value");
+    | WHILE LP error RP error {
+        yyerror2("Wrong while condition");
     }
     ;
 
@@ -223,10 +236,13 @@ Def: Specifier DecList SEMI {
         add_children($$, 3, $1, $2, $3);
     }
     | Specifier error SEMI  {
-        yyerror("Wrong Def");
+        yyerror2("Wrong Def");
+    }
+    | error DecList SEMI {
+        yyerror2("Wrong Def");
     }
     | error SEMI {
-        yyerror("Wrong Def or Stmt");
+        yyerror2("Wrong Def");
     }
     ;
 DecList: Dec {
@@ -286,7 +302,7 @@ Exp: Exp ASSIGNOP Exp {
         add_children($$, 3, $1, $2, $3);
     }
     | LP error RP {
-        yyerror("Wrong exp in ()");
+        yyerror2("Wrong exp in ()");
     }
     | MINUS Exp %prec NEG {
         $$ = create_node("Exp", @1.first_line, 0);
@@ -305,14 +321,11 @@ Exp: Exp ASSIGNOP Exp {
         add_children($$, 3, $1, $2, $3);
     }
     | ID LP error RP {
-        yyerror("Wrong function call");
+        yyerror2("Wrong function call");
     }
     | Exp LB Exp RB {
         $$ = create_node("Exp", @1.first_line, 0);
         add_children($$, 4, $1, $2, $3, $4);
-    }
-    | Exp LB error RB {
-        yyerror("Wrong array reference");
     }
     | Exp DOT ID {
         $$ = create_node("Exp", @1.first_line, 0);
@@ -342,7 +355,12 @@ Args: Exp COMMA Args {
     ;
 
 %%
-void yyerror(char *msg) {
+void yyerror(const char *msg) {
     error_flag = 1;
-    fprintf(stderr, "Error type B at Line %d: %s\n", yylloc.first_line, msg);
+    fprintf(stderr, "Error type B at Line %d: %s.\n", yylloc.first_line, msg);
+}
+
+void yyerror2(const char *msg) {
+    error_flag = 1;
+    // fprintf(stderr, "Error type B at Line %d: %s.\n", yylloc.first_line, msg);
 }

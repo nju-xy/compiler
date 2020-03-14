@@ -7,7 +7,8 @@
 #include <stdarg.h>
 #include <assert.h>
 
-void yyerror(char *msg);
+void yyerror(const char *msg);
+void yyerror2(const char *msg);
 int yylex();
 
 typedef struct Node_t
