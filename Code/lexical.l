@@ -27,6 +27,7 @@ hex         0[xX][0-9a-fA-F]+
     // float分为指数形式和非指数形式; 非指数形式小数点前后都要有数字; 指数形式基数部分小数点前后至少有一个有数字, 指数部分由正负号(可选)和一串数字(0-9)组成
     // 错误float(这里只识别一部分, 只考虑出现数字和.和eE的情况)
     //1. 指数形式, E后面没有数字
+    // wrong_float     {digit}+\.{digit}*[Ee]{letter_}*|{digit}*\.{digit}+[Ee]{letter_}*
 wrong_float     {digit}+\.{digit}*[Ee]|{digit}*\.{digit}+[Ee]
 float           {digit}+\.{digit}+|{digit}+\.{digit}*[Ee][+-]?{digit}+|{digit}*\.{digit}+[Ee][+-]?{digit}+
     // 注释分成两种, 单行注释直接正则表达式匹配, 多行匹配前半段, 之后input找到后半段为止
@@ -76,8 +77,8 @@ lcomment    \/\*
                 yylval.node->val.type_int = ret;
                 return INT;
             }
-{wrong_float} { 
-                fprintf(stderr, "Error type A at Line %d: Wrong float \'%s\'.\n", yylineno, yytext); 
+{wrong_float} {
+                fprintf(stderr, "Error type A at Line %d: Wrong float \'%s\', exponent has no digits.\n", yylineno, yytext); 
                 error_flag = 1;
                 return FLOAT;
             }

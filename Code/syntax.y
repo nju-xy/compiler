@@ -217,7 +217,7 @@ Stmt: Exp SEMI {
     | WHILE LP error RP Stmt {
         yyerror2("Wrong while condition");
     }
-    | WHILE LP error RP error {
+    | WHILE LP Exp RP error {
         yyerror2("Wrong while condition");
     }
     ;
@@ -362,5 +362,5 @@ void yyerror(const char *msg) {
 
 void yyerror2(const char *msg) {
     error_flag = 1;
-    // fprintf(stderr, "Error type B at Line %d: %s.\n", yylloc.first_line, msg);
+    //fprintf(stderr, "Error type B at Line %d: %s.\n", yylloc.first_line, msg);
 }
