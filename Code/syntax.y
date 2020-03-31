@@ -64,7 +64,22 @@ ExtDef: Specifier ExtDecList SEMI {
         $$ = create_node("ExtDef", @1.first_line, 0);
         add_children($$, 3, $1, $2, $3);
     }
+    | Specifier error CompSt {
+        yyerror2("Wrong ExtDef"); 
+    }
+    | error FunDec CompSt {
+        yyerror2("Wrong ExtDef"); 
+    }
+    | error CompSt {
+        yyerror2("Wrong ExtDef"); 
+    }
     | error SEMI { 
+        yyerror2("Wrong ExtDef"); 
+    }
+    | error ExtDecList SEMI {
+        yyerror2("Wrong ExtDef"); 
+    }
+    | Specifier error SEMI {
         yyerror2("Wrong ExtDef"); 
     }
     ;
@@ -135,10 +150,16 @@ FunDec: ID LP VarList RP {
     | ID LP error RP { 
         yyerror2("Wrong FunDec"); 
     }
+    | error LP VarList RP {
+        yyerror2("Wrong FunDec"); 
+    }
     ;
 VarList: ParamDec COMMA VarList {
         $$ = create_node("VarList", @1.first_line, 0);
         add_children($$, 3, $1, $2, $3);
+    }
+    | error COMMA VarList {
+        yyerror2("Wrong VarList"); 
     }
     | ParamDec {
         $$ = create_node("VarList", @1.first_line, 0);
@@ -157,10 +178,11 @@ CompSt: LC DefList StmtList RC {
         $$ = create_node("CompSt", @1.first_line, 0);
         add_children($$, 4, $1, $2, $3, $4);
     }
-    | LC error RC { 
+    | LC DefList error RC { 
         yyerror2("Wrong CompSt"); 
     }
     ;
+    /* 这里删除了 LC error RC */
 StmtList: /* empty */ {
         $$ = NULL;
     }
@@ -220,6 +242,9 @@ Stmt: Exp SEMI {
     | WHILE LP Exp RP error {
         yyerror2("Wrong while condition");
     }
+    | error SEMI {
+        yyerror2("Wrong stmt");
+    }
     ;
 
 /* Local Definitions */
@@ -235,16 +260,21 @@ Def: Specifier DecList SEMI {
         $$ = create_node("Def", @1.first_line, 0);
         add_children($$, 3, $1, $2, $3);
     }
+    | Specifier DecList error SEMI {
+        yyerror2("Wrong Def");
+    }
     | Specifier error SEMI  {
         yyerror2("Wrong Def");
     }
+    ;
+    /* 删掉了 
     | error DecList SEMI {
         yyerror2("Wrong Def");
     }
     | error SEMI {
         yyerror2("Wrong Def");
     }
-    ;
+    */
 DecList: Dec {
         $$ = create_node("DecList", @1.first_line, 0);
         add_children($$, 1, $1);
@@ -268,6 +298,9 @@ Dec: VarDec {
 Exp: Exp ASSIGNOP Exp {
         $$ = create_node("Exp", @1.first_line, 0);
         add_children($$, 3, $1, $2, $3);
+    }
+    | error ASSIGNOP Exp {
+        yyerror2("Wrong Exp");
     }
     | Exp AND Exp  {
         $$ = create_node("Exp", @1. first_line, 0);

@@ -236,7 +236,7 @@ void multiline_comment() {
     while(!(pre == '*' && cur == '/')) {
         pre = cur; 
         cur = input();
-        if(cur == '\0') {
+        if(cur == EOF || cur <= 0) {
             fprintf(stderr, "Error type A at Line %d: unterminated comment.\n", yylineno);
             error_flag = 1;
             break;
