@@ -5,6 +5,7 @@ extern int yyparse();
 
 void init() {
     error_flag = 0;
+    symbol_table_init();
 }
 
 int main(int argc, char ** argv) {
@@ -19,7 +20,8 @@ int main(int argc, char ** argv) {
     yyrestart(f);
     yyparse();
     if(!error_flag) {
-        draw_tree(root, 0);
+        // draw_tree(root, 0);
+        symbol_test();
     }
     return 0;
 }

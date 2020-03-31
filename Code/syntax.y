@@ -11,7 +11,7 @@
 
 /* declare types */
 %union {
-    Node_t * node;
+    Syntax_Tree_Node_t * node;
 }
 
 

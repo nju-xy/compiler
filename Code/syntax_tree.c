@@ -1,7 +1,7 @@
 #include "common.h"
 
-Node_t * create_node(const char * name, int lineno, int terminal) {
-    Node_t * node = (Node_t *)malloc(sizeof(Node_t));
+Syntax_Tree_Node_t * create_node(const char * name, int lineno, int terminal) {
+    Syntax_Tree_Node_t * node = (Syntax_Tree_Node_t *)malloc(sizeof(Syntax_Tree_Node_t));
     node->first_child = NULL;
     node->next_sibling = NULL;
     node->val.type_double = 0;
@@ -11,14 +11,14 @@ Node_t * create_node(const char * name, int lineno, int terminal) {
     return node;
 }
 
-void add_children(Node_t * father, int num, ...) {
+void add_children(Syntax_Tree_Node_t * father, int num, ...) {
     assert(father);
     if(num == 0) return;
     va_list ap;
     va_start(ap, num); 
 
     
-    Node_t * child = va_arg(ap, Node_t *);
+    Syntax_Tree_Node_t * child = va_arg(ap, Syntax_Tree_Node_t *);
     
     // int i = 1;
     // while(!child) {
@@ -28,12 +28,12 @@ void add_children(Node_t * father, int num, ...) {
     //         // printf("嘤\n");
     //         return;
     //     }
-    //     child = va_arg(ap, Node_t *);
+    //     child = va_arg(ap, Syntax_Tree_Node_t *);
     // }     
     // assert(child);
     // father->first_child = child;
     // for(; i <= num; ++i) {
-    //     Node_t *next_sibling = va_arg(ap, Node_t *);
+    //     Syntax_Tree_Node_t *next_sibling = va_arg(ap, Syntax_Tree_Node_t *);
     //     if(next_sibling) {
     //         child->next_sibling = next_sibling;
     //         child = next_sibling;
@@ -48,7 +48,7 @@ void add_children(Node_t * father, int num, ...) {
     // 这里默认有多个子结点的时候, 第一个子结点非空
     father->first_child = child;
     for(int i = 1; i < num; ++i) {
-        Node_t *next_sibling = va_arg(ap, Node_t *);
+        Syntax_Tree_Node_t *next_sibling = va_arg(ap, Syntax_Tree_Node_t *);
         if(next_sibling) {
             child->next_sibling = next_sibling;
             child = next_sibling;
@@ -58,7 +58,7 @@ void add_children(Node_t * father, int num, ...) {
     va_end(ap);
 }
 
-void print_node(Node_t *node) {
+void print_node(Syntax_Tree_Node_t *node) {
     printf("%s", node->name);
     if(!node->terminal) {
         printf(" (%d)", node->lineno);
@@ -81,7 +81,7 @@ void print_node(Node_t *node) {
     printf("\n");
 }
 
-void draw_tree(Node_t *node, int retract) { // dfs
+void draw_tree(Syntax_Tree_Node_t *node, int retract) { // dfs
     if(!node) return;
     // print the node
     for(int i = 0; i < retract; ++i) {
@@ -89,7 +89,7 @@ void draw_tree(Node_t *node, int retract) { // dfs
     }
     print_node(node);
     // print the children
-    Node_t * child = node->first_child;
+    Syntax_Tree_Node_t * child = node->first_child;
     while(child) {
         draw_tree(child, retract + 2);
         child = child->next_sibling;
