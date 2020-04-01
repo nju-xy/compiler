@@ -20,8 +20,8 @@ int main(int argc, char ** argv) {
     yyrestart(f);
     yyparse();
     if(!error_flag) {
-        // draw_tree(root, 0);
-        symbol_test();
+        draw_tree(root, 0);
+        semantic_analyzer(root);
     }
     return 0;
 }

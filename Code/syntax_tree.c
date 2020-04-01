@@ -95,3 +95,12 @@ void draw_tree(Syntax_Tree_Node_t *node, int retract) { // dfs
         child = child->next_sibling;
     }
 }
+
+Syntax_Tree_Node_t * nth_child(Syntax_Tree_Node_t * node, int n) {
+    // 返回第n个儿子，n从0开始计数
+    Syntax_Tree_Node_t * ret = node->first_child;
+    for(int i = 0; i < n; ++i) {
+        ret = ret->next_sibling;
+    }
+    return ret;
+}

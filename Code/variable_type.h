@@ -30,5 +30,10 @@ struct Type_
     };
 };
 
+Type* new_type_int();
+Type* new_type_float();
+Type* new_type_array(Type* elem, int num);
+int cal_size(Type* elem);
+void print_type(Type* elem);
 
 #endif

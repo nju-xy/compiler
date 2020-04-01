@@ -27,6 +27,7 @@ void draw_tree(Syntax_Tree_Node_t *node, int retract);
 Syntax_Tree_Node_t * create_node(const char * name, int lineno, int terminal);
 void add_children(Syntax_Tree_Node_t * father, int num, ...);
 void print_node(Syntax_Tree_Node_t * node);
+Syntax_Tree_Node_t * nth_child(Syntax_Tree_Node_t * node, int n);
 
 Syntax_Tree_Node_t * root;
 int error_flag;

@@ -1,9 +1,5 @@
 #include "common.h"
 
-void symbol_test() {
-    
-}
-
 void symbol_table_init() {
     add_scope(0);
 }

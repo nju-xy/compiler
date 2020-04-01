@@ -64,6 +64,11 @@ ExtDef: Specifier ExtDecList SEMI {
         $$ = create_node("ExtDef", @1.first_line, 0);
         add_children($$, 3, $1, $2, $3);
     }
+    | Specifier FunDec SEMI {
+        // 新加的，函数声明
+        $$ = create_node("ExtDef", @1.first_line, 0);
+        add_children($$, 3, $1, $2, $3);
+    }
     | Specifier error CompSt {
         yyerror2("Wrong ExtDef"); 
     }
