@@ -30,10 +30,31 @@ struct Type_
     };
 };
 
+// 定义函数参数
+typedef struct Para_ Para;
+struct Para_
+{
+    Type* type;
+    Para* next;
+};
+
+// 定义函数
+typedef struct Func_ Func;
+struct Func_
+{
+    char* name;
+    Type* ret_type;
+    Para* para;
+};
+
 Type* new_type_int();
 Type* new_type_float();
 Type* new_type_array(Type* elem, int num);
-int cal_size(Type* elem);
+// int cal_size(Type* elem);
 void print_type(Type* elem);
+
+void new_func(Type* ret_type, char* name, Para* para, int declare);
+void print_func(Func* func);
+Para* new_para(Type* type, Para* next);
 
 #endif

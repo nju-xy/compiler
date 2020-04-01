@@ -18,7 +18,7 @@ Type* new_type_array(Type* elem, int num) {
     Type* new_arr = (Type*)malloc(sizeof(Type));
     new_arr->kind = ARRAY;
     new_arr->array.elem = elem;
-    new_arr->array.size = num * cal_size(elem);
+    new_arr->array.size = num;
     return new_arr;
 }
 
@@ -66,4 +66,32 @@ void print_type(Type* elem) {
             field = field->next;
         }
     }
+}
+
+Para* new_para(Type* type, Para* next) {
+    Para* para = (Para*)malloc(sizeof(Para));
+    para->type = type;
+    para->next = next;
+    return para;
+}
+
+void new_func(Type* ret_type, char* name, Para* para, int declare) {
+    Func* func = (Func*)malloc(sizeof(Func));
+    func->name = name;
+    func->para = para;
+    func->ret_type = ret_type;
+    print_func(func);
+}
+
+void print_func(Func* func) {
+    Log("Func name: %s", func->name);
+    Log("return type:");
+    print_type(func->ret_type);
+    Para* para = func->para;
+    while(para) {
+        Log("Para");
+        print_type(para->type);
+        para = para->next;
+    }
+    Log("End func");
 }

@@ -34,23 +34,23 @@ void semantic_ExtDef(Syntax_Tree_Node_t * node) {
     assert(node);
     assert(strcmp(node->name, "ExtDef") == 0);
     // 类型
-    Type* ret_type = semantic_Specifier(node->first_child);
+    Type* type = semantic_Specifier(node->first_child);
     
     // Log("%s, %s, %d", node->first_child->name, node->first_child->next_sibling->name, node->lineno);
-    Log("Specifier type");
-    print_type(ret_type);
+    // Log("Specifier type");
+    // print_type(ret_type);
     
     if(strcmp(node->first_child->next_sibling->name, "ExtDecList") == 0) {
         // 定义全局变量
-        semantic_ExtDecList(node->first_child->next_sibling);
+        semantic_ExtDecList(node->first_child->next_sibling, type);
     }
     else if(strcmp(node->first_child->next_sibling->name, "FunDec") == 0) {
         if(strcmp(nth_child(node, 2)->name, "SEMI") == 0) {
             // 函数声明
-            semantic_FunDec(node->first_child->next_sibling);
+            semantic_FunDec(node->first_child->next_sibling, type, 1);
         }
         else { // 函数定义
-            semantic_FunDec(node->first_child->next_sibling);
+            semantic_FunDec(node->first_child->next_sibling, type, 0);
             semantic_CompSt(nth_child(node, 2));
         }
     }
@@ -95,57 +95,64 @@ void semantic_Tag(Syntax_Tree_Node_t * node) {
     assert(strcmp(node->name, "OptTag") == 0);
 }
 
-void semantic_ExtDecList(Syntax_Tree_Node_t * node) {
+void semantic_ExtDecList(Syntax_Tree_Node_t * node, Type* type) {
     // ExtDecList -> VarDec
     //             | VarDec COMMA ExtDecList
     assert(node);
     assert(strcmp(node->name, "ExtDecList") == 0);
-    semantic_VarDec(node->first_child);
+    semantic_VarDec(node->first_child, type);
     if(nth_child(node, 1)) {
-        semantic_ExtDecList(nth_child(node, 2));
+        semantic_ExtDecList(nth_child(node, 2), type);
     }
 }
 
 // Declarators
-void semantic_VarDec(Syntax_Tree_Node_t * node) {
+Type* semantic_VarDec(Syntax_Tree_Node_t * node, Type* type) {
     // VarDec -> ID
-    //         | ID LB INT RB
+    //         | VarDec LB INT RB
     assert(node);
     assert(strcmp(node->name, "VarDec") == 0);
-
     if(nth_child(node, 1)) {
-
+        int num = nth_child(node, 2)->val.type_int;
+        Type* new_type = new_type_array(type, num);
+        return semantic_VarDec(nth_child(node, 0), new_type);
     }
+    return type;
 }
 
-void semantic_FunDec(Syntax_Tree_Node_t * node) {
+void semantic_FunDec(Syntax_Tree_Node_t * node, Type* ret_type, int declare) {
     // FunDec -> ID LP VarList RP
     //         | ID LP RP
     assert(node);
     assert(strcmp(node->name, "FunDec") == 0);
-    
+
+    Para* para = NULL;
     if(nth_child(node, 3)) {
-        semantic_VarList(nth_child(node, 2));
+        para = semantic_VarList(nth_child(node, 2));
     }
+
+    new_func(ret_type, node->first_child->val.id_name, para, declare);
 }
 
-void semantic_VarList(Syntax_Tree_Node_t * node) {
+Para* semantic_VarList(Syntax_Tree_Node_t * node) {
     // VarList -> ParamDec COMMA VarList
     //          | ParamDec
     assert(node);
     assert(strcmp(node->name, "VarList") == 0);
-    semantic_ParamDec(node->first_child);
+    Type* type = semantic_ParamDec(node->first_child);
+    Para* next_para = NULL;
     if(nth_child(node, 1)) {
-        semantic_VarList(nth_child(node, 2));
+        next_para = semantic_VarList(nth_child(node, 2));
     }
+    return new_para(type, next_para);
 }
 
-void semantic_ParamDec(Syntax_Tree_Node_t * node) {
+Type* semantic_ParamDec(Syntax_Tree_Node_t * node) {
     // VarList -> Specifier VarDec
     assert(node);
     assert(strcmp(node->name, "ParamDec") == 0);
-    semantic_Specifier(node->first_child);
-    semantic_VarDec(node->first_child->next_sibling);
+    Type* type = semantic_Specifier(node->first_child);
+    return semantic_VarDec(node->first_child->next_sibling, type);
 }
 
 // Statements
@@ -162,7 +169,7 @@ void semantic_CompSt(Syntax_Tree_Node_t * node) {
     else if(strcmp(nth_child(node, 1)->name, "StmtList") == 0) {
         semantic_StmtList(nth_child(node, 1));
     }
-    if(strcmp(nth_child(node, 2)->name, "StmtList") == 0) {
+    if(nth_child(node, 2) && strcmp(nth_child(node, 2)->name, "StmtList") == 0) {
         semantic_StmtList(nth_child(node, 2));
     }
 }
@@ -231,30 +238,30 @@ void semantic_Def(Syntax_Tree_Node_t * node) {
     assert(node);
     assert(strcmp(node->name, "Def") == 0);
 
-    semantic_Specifier(node->first_child);
-    semantic_DecList(node->first_child->next_sibling);
+    Type* type = semantic_Specifier(node->first_child);
+    semantic_DecList(node->first_child->next_sibling, type);
 }
 
-void semantic_DecList(Syntax_Tree_Node_t * node) {
+void semantic_DecList(Syntax_Tree_Node_t * node, Type* type) {
     // DecList -> Dec
     //          | Dec COMMA DecList
     assert(node);
     assert(strcmp(node->name, "DecList") == 0);
 
-    semantic_Dec(node->first_child);
+    semantic_Dec(node->first_child, type);
     
     if(node->first_child->next_sibling) {
-        semantic_DecList(nth_child(node, 2));
+        semantic_DecList(nth_child(node, 2), type);
     }
 }
 
-void semantic_Dec(Syntax_Tree_Node_t * node) {
-    // DecList -> VarDec
-    //          | VarDec ASSIGNOP Exp
+void semantic_Dec(Syntax_Tree_Node_t * node, Type* type) {
+    // Dec -> VarDec
+    //     | VarDec ASSIGNOP Exp
     assert(node);
     assert(strcmp(node->name, "Dec") == 0);
 
-    semantic_VarDec(node->first_child);
+    semantic_VarDec(node->first_child, type);
     
     if(node->first_child->next_sibling) {
         semantic_Exp(nth_child(node, 2));
