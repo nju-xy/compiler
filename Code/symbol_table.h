@@ -8,30 +8,52 @@ typedef struct Symbol_ Symbol;
 struct Symbol_
 {
     char* name;
-    Type* type;
-    Symbol* next; // 下一个符号
+    int scope_num;
+    int lineno;
+    enum {
+        symbol_FUNC, symbol_STRUCTURE, symbol_VARIABLE
+        } kind;
+    union {
+        Type* type;
+        Func* func;
+        FieldList* field;
+    };
+    Symbol* next_in_hash; // 哈希表同一个格子内的下一个符号
+    Symbol* next_in_scope; // 同一个作用域里的下一个符号
 };
 
 // 定义作用域
 typedef struct Scope_ Scope;
 struct Scope_ 
 {
-    int lineno; // 开始的行号
+    int no; // 作用域编号
     Scope* next; // 下一个作用域
     Symbol* first_symbol; // 这个作用域中的首个符号
 };
 
 Scope* scope_head;
+Scope* scope_struct;
+Scope* scope_func;
 
-// 函数申明
+// 哈希
+#define SIZE_OF_HASH 0x3fff
+Symbol * hash_table[SIZE_OF_HASH];
+unsigned int hash(char* name);
 
-// 测试用
-void symbol_test();
-void print_scope(Scope* head);
+// 函数相关
+void add_func(Func* func, int lineno);
+Func* find_func(char* name);
+void add_func_into_table(Func* func);
 
 // 作用域相关
 void symbol_table_init();
-void add_scope(int lineno);
+void add_scope();
 void delete_scope();
+void print_scope(Scope* head);
+
+// 符号表的加入
+void add_sym_into_table(Symbol* sym);
+
+int nr_scope;
 
 #endif

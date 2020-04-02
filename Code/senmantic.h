@@ -3,6 +3,8 @@
 
 #include "syntax_tree.h"
 
+void sem_error(int no, int lineno, char* err_msg);
+void check_func_table();
 void semantic_analyzer(Syntax_Tree_Node_t * root);
 void semantic_Program(Syntax_Tree_Node_t * node);
 void semantic_ExtDefList(Syntax_Tree_Node_t * node);

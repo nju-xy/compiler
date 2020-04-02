@@ -1,9 +1,23 @@
 #include "common.h"
 
+void sem_error(int no, int lineno, char* err_msg) {
+    printf("Error type %d at Line %d: %s.\n", no, lineno, err_msg);
+}
+
 void semantic_analyzer(Syntax_Tree_Node_t * root) {
     symbol_table_init();
     semantic_Program(root);
-    // check_func_table();
+    check_func_table();
+}
+
+void check_func_table() {
+    Symbol* sym = scope_func->first_symbol;
+    while(sym) {
+        if(!sym->func->def) 
+            sem_error(18, sym->lineno, "函数进行了声明,但没有被定义");
+        sym = sym->next_in_scope;
+    }
+    print_func_table();
 }
 
 // High-level Definitions
@@ -131,7 +145,8 @@ void semantic_FunDec(Syntax_Tree_Node_t * node, Type* ret_type, int declare) {
         para = semantic_VarList(nth_child(node, 2));
     }
 
-    new_func(ret_type, node->first_child->val.id_name, para, declare);
+    Func* func = new_func(ret_type, node->first_child->val.id_name, para, node->lineno, declare);
+    add_func(func, node->lineno);
 }
 
 Para* semantic_VarList(Syntax_Tree_Node_t * node) {
