@@ -8,7 +8,8 @@ void semantic_analyzer(Syntax_Tree_Node_t * root) {
     symbol_table_init();
     semantic_Program(root);
     check_func_table();
-    print_func_table();
+    // print_func_table();
+    print_struct_table();
 }
 
 void check_func_table() {
@@ -162,8 +163,7 @@ FieldList* semantic_VarDec(Syntax_Tree_Node_t * node, Type* type) {
         return semantic_VarDec(nth_child(node, 0), new_type);
     }
     else {
-        char* name = node->first_child->name;
-        return new_para(type, NULL, name);
+        return new_para(type, NULL, node->first_child->val.id_name);
     }
 }
 
@@ -336,6 +336,9 @@ FieldList* semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int in_struct) {
     
     if(node->first_child->next_sibling) {
         semantic_Exp(nth_child(node, 2));
+    }
+    if(!in_struct) {
+        add_variable(field->type, field->name, node->lineno);
     }
     return field;
 }

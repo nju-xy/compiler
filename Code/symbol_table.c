@@ -38,10 +38,9 @@ void delete_scope() {
 
 void print_scope(Scope* head) {
     if(!head) {
-        printf("\n");
         return;
     }
-    printf("%d ", head->no);
+    Log("%d", head->no);
     print_scope(head->next);
 }
 
@@ -95,7 +94,7 @@ void add_struct(Type* type, char* name, int lineno) {
     // Log("add struct");
     Symbol* old_sym = find_struct_or_variable(name);
     if(old_sym == NULL) {
-        add_struct_into_table(type, name);
+        add_struct_into_table(type, name, lineno);
     }
     else {
         if(old_sym->kind == symbol_STRUCTURE)
@@ -121,18 +120,19 @@ Symbol* find_struct_or_variable(char* name) {
     return NULL;
 }
 
-void add_struct_into_table(Type* type, char* name) {
+void add_struct_into_table(Type* type, char* name, int lineno) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->name = name;
     sym->kind = symbol_STRUCTURE;
     sym->type = type;
     sym->scope_num = 1;
-    sym->lineno = 0;
+    sym->lineno = lineno;
     add_sym_into_table(sym);
 }
 
 
 void add_sym_into_table(Symbol* sym) {
+    // 横向
     if(!hash_table[hash(sym->name)]) {
         hash_table[hash(sym->name)] = sym;
     }
@@ -140,6 +140,7 @@ void add_sym_into_table(Symbol* sym) {
         sym->next_in_hash = hash_table[hash(sym->name)];
         hash_table[hash(sym->name)] = sym;
     }
+    // 纵向
     if(sym->kind == symbol_FUNC) {
         sym->next_in_scope = scope_func->first_symbol;
         scope_func->first_symbol = sym;
@@ -152,4 +153,31 @@ void add_sym_into_table(Symbol* sym) {
         sym->next_in_scope = scope_head->first_symbol;
         scope_head->first_symbol = sym;
     }
+}
+
+void add_variable(Type* type, char* name, int lineno) {
+    Log("add variable %s", name);
+    Symbol* old_sym = find_struct_or_variable(name);
+    if(old_sym == NULL) {
+        add_variable_into_table(type, name, lineno);
+    }
+    else {
+        if(old_sym->kind == symbol_STRUCTURE)
+            sem_error(3, lineno, "变量与前面定义过的结构体名字重复");
+        else if(old_sym->kind == symbol_VARIABLE)
+            sem_error(3, lineno, "变量出现重复定义");
+        else {
+            // 变量和函数重名，不管
+        }
+    }
+}
+
+void add_variable_into_table(Type* type, char* name, int lineno) {
+    Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+    sym->name = name;
+    sym->kind = symbol_VARIABLE;
+    sym->type = type;
+    sym->scope_num = nr_scope - 1;
+    sym->lineno = lineno;
+    add_sym_into_table(sym);
 }

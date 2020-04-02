@@ -59,7 +59,9 @@ Func* new_func(Type* ret_type, FieldList* para, int lineno, int declare);
 void print_func(Func* func);
 FieldList* new_para(Type* type, FieldList* next, char* name);
 int same_func(Func* func1, Func* func2);
+int same_struct(FieldList* field1, FieldList* field2);
 
 void print_func_table();
+void print_struct_table();
 
 #endif

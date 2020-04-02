@@ -57,8 +57,8 @@ void print_type(Type* elem) {
         Log("Type: ");
         print_type(elem->array.elem);
     }
-    else { // struct
-        Log("struct: \n");
+    else { // struct 
+        Log("struct: ");
         FieldList* field = elem->field;
         while(field) {
             Log("name: %s", field->name);
@@ -81,18 +81,7 @@ int same_type(Type* t1, Type* t2) {
             return 0;
     }
     else {
-        FieldList* f1 = t1->field;
-        FieldList* f2 = t2->field;
-        while(1) {
-            if(!f1 && !f2)
-                return 1;
-            else if(!f1 || !f2)
-                return 0;
-            if(!same_type(f1->type, f2->type))
-                return 0;
-            f1 = f1->next;
-            f2 = f2->next;
-        }
+        return same_struct(t1->field, t2->field);
     }
     return 1;
 }
@@ -117,6 +106,7 @@ Func* new_func(Type* ret_type, FieldList* para, int lineno, int declare) {
     // print_func(func);
     return func;
 }
+
 
 void print_func_table() {
     Symbol* sym = scope_func->first_symbol;
@@ -157,4 +147,32 @@ int same_func(Func* func1, Func* func2) {
         p2 = p2->next;
     }
     return 1;
+}
+
+
+int same_struct(FieldList* field1, FieldList* field2) {
+    // 判断两个结构体内部是否相同（不包含名字）
+    FieldList* p1 = field1;
+    FieldList* p2 = field2;
+    while(1) {
+        if(!p1 && !p2)
+            return 1;
+        if(!p1 || !p2)
+            return 0;
+        if(!same_type(p1->type, p2->type))
+            return 0;
+        p1 = p1->next;
+        p2 = p2->next;
+    }
+    return 1;
+}
+
+
+void print_struct_table() {
+    Symbol* sym = scope_struct->first_symbol;
+    while(sym) {
+        Log("struct name: %s", sym->name);
+        print_type(sym->type);
+        sym = sym->next_in_scope;
+    }
 }

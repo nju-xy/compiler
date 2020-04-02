@@ -47,7 +47,11 @@ void add_func_into_table(Func* func, char* name);
 // 结构体相关
 void add_struct(Type* type, char* name, int lineno);
 Symbol* find_struct_or_variable(char* name);
-void add_struct_into_table(Type* type, char* name);
+void add_struct_into_table(Type* type, char* name, int lineno);
+
+// 变量相关
+void add_variable(Type* type, char* name, int lineno);
+void add_variable_into_table(Type* type, char* name, int lineno);
 
 // 作用域相关
 void symbol_table_init();
