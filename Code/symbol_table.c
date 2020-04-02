@@ -45,15 +45,92 @@ void print_scope(Scope* head) {
     print_scope(head->next);
 }
 
-void add_func_into_table(Func* func) {
+void add_func_into_table(Func* func, char* name) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
-    sym->name = func->name;
+    sym->name = name;
     sym->kind = symbol_FUNC;
     sym->func = func;
     sym->scope_num = 0;
-    sym->lineno = sym->func->lineno;
+    // sym->lineno = sym->func->lineno;
     add_sym_into_table(sym);
 }
+
+void add_func(Func* func, int lineno, char* name) {
+    Symbol* old_func_sym = find_func(name);
+    if(old_func_sym == NULL) {
+        add_func_into_table(func, name);
+    }
+    else if(old_func_sym->func->def && func->def)
+        sem_error(4, lineno, "函数出现重复定义");
+    else if(!same_func(func, old_func_sym->func)) {
+        if(func->def) {
+            sem_error(19, lineno, "函数定义与之前的声明冲突");
+        }
+        else {
+            if(old_func_sym->func->def) 
+                sem_error(19, lineno, "函数声明与之前的定义冲突");
+            else
+                sem_error(19, lineno, "函数的多次声明互相冲突");
+        }
+    }
+    else if(func->def) { // 定义了之前申明的函数
+        old_func_sym->func->def = 1;
+    }
+}
+
+Symbol* find_func(char* name) {
+    Symbol* sym = hash_table[hash(name)];
+    while(sym) {
+        // Log("find %d, %s", sym->kind == symbol_FUNC, sym->name);
+        if(sym->kind == symbol_FUNC && strcmp(name, sym->name) == 0)
+            return sym;
+        sym = sym->next_in_hash;
+    }
+    // Log("find nothing");
+    return NULL;
+}
+
+// 结构体相关
+void add_struct(Type* type, char* name, int lineno) {
+    // Log("add struct");
+    Symbol* old_sym = find_struct_or_variable(name);
+    if(old_sym == NULL) {
+        add_struct_into_table(type, name);
+    }
+    else {
+        if(old_sym->kind == symbol_STRUCTURE)
+            sem_error(15, lineno, "结构体的名字与前面定义过的结构体或变量的名字重复");
+        else if(old_sym->kind == symbol_VARIABLE)
+            sem_error(15, lineno, "结构体的名字与前面定义过的变量的名字重复");
+        else {
+            // 结构体和函数重名，不管
+        }
+    }
+    // Log("After add struct");
+}
+
+Symbol* find_struct_or_variable(char* name) {
+    Symbol* sym = hash_table[hash(name)];
+    while(sym) {
+        // Log("find %d, %s", sym->kind == symbol_FUNC, sym->name);
+        if(sym->kind != symbol_FUNC && strcmp(name, sym->name) == 0)
+            return sym;
+        sym = sym->next_in_hash;
+    }
+    // Log("find nothing");
+    return NULL;
+}
+
+void add_struct_into_table(Type* type, char* name) {
+    Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+    sym->name = name;
+    sym->kind = symbol_STRUCTURE;
+    sym->type = type;
+    sym->scope_num = 1;
+    sym->lineno = 0;
+    add_sym_into_table(sym);
+}
+
 
 void add_sym_into_table(Symbol* sym) {
     if(!hash_table[hash(sym->name)]) {
@@ -75,39 +152,4 @@ void add_sym_into_table(Symbol* sym) {
         sym->next_in_scope = scope_head->first_symbol;
         scope_head->first_symbol = sym;
     }
-}
-
-void add_func(Func* func, int lineno) {
-    Func* old_func = find_func(func->name);
-    if(old_func == NULL) {
-        add_func_into_table(func);
-    }
-    else if(old_func->def && func->def)
-        sem_error(4, lineno, "函数出现重复定义");
-    else if(!same_func(func, old_func)) {
-        if(func->def) {
-            sem_error(19, lineno, "函数定义与之前的声明冲突");
-        }
-        else {
-            if(old_func->def) 
-                sem_error(19, lineno, "函数声明与之前的定义冲突");
-            else
-                sem_error(19, lineno, "函数的多次声明互相冲突");
-        }
-    }
-    else if(func->def) { // 定义了之前申明的函数
-        old_func->def = 1;
-    }
-}
-
-Func* find_func(char* name) {
-    Symbol* sym = hash_table[hash(name)];
-    while(sym) {
-        // Log("find %d, %s", sym->kind == symbol_FUNC, sym->name);
-        if(sym->kind == symbol_FUNC && strcmp(name, sym->name) == 0)
-            return sym->func;
-        sym = sym->next_in_hash;
-    }
-    // Log("find nothing");
-    return NULL;
 }

@@ -26,38 +26,38 @@ struct Type_
             Type* elem;
             int size;
         } array;
-        FieldList* structure;
+        FieldList* field;
     };
 };
 
-// 定义函数参数
-typedef struct Para_ Para;
-struct Para_
-{
-    Type* type;
-    Para* next;
-};
+// // 定义函数参数
+// typedef struct Para_ Para;
+// struct Para_
+// {
+//     Type* type;
+//     Para* next;
+// };
 
 // 定义函数
 typedef struct Func_ Func;
 struct Func_
 {
-    char* name;
     int lineno;
     Type* ret_type;
-    Para* para;
+    FieldList* para;
     int def; // 函数是否已经定义（用于判断是否有函数申明了但是未定义的错误）
 };
 
 Type* new_type_int();
 Type* new_type_float();
 Type* new_type_array(Type* elem, int num);
+Type* new_type_struct(FieldList* field);
 void print_type(Type* elem);
 int same_type(Type* t1, Type* t2);
 
-Func* new_func(Type* ret_type, char* name, Para* para, int lineno, int declare);
+Func* new_func(Type* ret_type, FieldList* para, int lineno, int declare);
 void print_func(Func* func);
-Para* new_para(Type* type, Para* next);
+FieldList* new_para(Type* type, FieldList* next, char* name);
 int same_func(Func* func1, Func* func2);
 
 void print_func_table();

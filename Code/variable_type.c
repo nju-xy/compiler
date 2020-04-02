@@ -22,10 +22,10 @@ Type* new_type_array(Type* elem, int num) {
     return new_arr;
 }
 
-Type* new_type_struct(FieldList* structure) {
+Type* new_type_struct(FieldList* field) {
     Type* new_struct = (Type*)malloc(sizeof(Type));
     new_struct->kind = STRUCTURE;
-    TODO();
+    new_struct->field = field;
     return new_struct;
 }
 
@@ -59,7 +59,7 @@ void print_type(Type* elem) {
     }
     else { // struct
         Log("struct: \n");
-        FieldList* field = elem->structure;
+        FieldList* field = elem->field;
         while(field) {
             Log("name: %s", field->name);
             print_type(field->type);
@@ -81,8 +81,8 @@ int same_type(Type* t1, Type* t2) {
             return 0;
     }
     else {
-        FieldList* f1 = t1->structure;
-        FieldList* f2 = t2->structure;
+        FieldList* f1 = t1->field;
+        FieldList* f2 = t2->field;
         while(1) {
             if(!f1 && !f2)
                 return 1;
@@ -97,16 +97,16 @@ int same_type(Type* t1, Type* t2) {
     return 1;
 }
 
-Para* new_para(Type* type, Para* next) {
-    Para* para = (Para*)malloc(sizeof(Para));
+FieldList* new_para(Type* type, FieldList* next, char* name) {
+    FieldList* para = (FieldList*)malloc(sizeof(FieldList));
     para->type = type;
     para->next = next;
+    para->name = name;
     return para;
 }
 
-Func* new_func(Type* ret_type, char* name, Para* para, int lineno, int declare) {
+Func* new_func(Type* ret_type, FieldList* para, int lineno, int declare) {
     Func* func = (Func*)malloc(sizeof(Func));
-    func->name = name;
     func->para = para;
     func->ret_type = ret_type;
     func->lineno = lineno;
@@ -121,16 +121,16 @@ Func* new_func(Type* ret_type, char* name, Para* para, int lineno, int declare) 
 void print_func_table() {
     Symbol* sym = scope_func->first_symbol;
     while(sym) {
+        Log("Func name: %s", sym->name);
         print_func(sym->func);
         sym = sym->next_in_scope;
     }
 }
 
 void print_func(Func* func) {
-    Log("Func name: %s", func->name);
     Log("return type:");
     print_type(func->ret_type);
-    Para* para = func->para;
+    FieldList* para = func->para;
     while(para) {
         Log("Para");
         print_type(para->type);
@@ -141,12 +141,11 @@ void print_func(Func* func) {
 
 
 int same_func(Func* func1, Func* func2) {
-    if(strcmp(func1->name, func2->name) != 0)
-        return 0;
+    // 判断两个函数的类型是否相同（不包含名字）
     if(!same_type(func1->ret_type, func2->ret_type)) 
         return 0;
-    Para* p1 = func1->para;
-    Para* p2 = func2->para;
+    FieldList* p1 = func1->para;
+    FieldList* p2 = func2->para;
     while(1) {
         if(!p1 && !p2)
             return 1;

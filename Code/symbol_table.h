@@ -16,7 +16,6 @@ struct Symbol_
     union {
         Type* type;
         Func* func;
-        FieldList* field;
     };
     Symbol* next_in_hash; // 哈希表同一个格子内的下一个符号
     Symbol* next_in_scope; // 同一个作用域里的下一个符号
@@ -41,9 +40,14 @@ Symbol * hash_table[SIZE_OF_HASH];
 unsigned int hash(char* name);
 
 // 函数相关
-void add_func(Func* func, int lineno);
-Func* find_func(char* name);
-void add_func_into_table(Func* func);
+void add_func(Func* func, int lineno, char* name);
+Symbol* find_func(char* name);
+void add_func_into_table(Func* func, char* name);
+
+// 结构体相关
+void add_struct(Type* type, char* name, int lineno);
+Symbol* find_struct_or_variable(char* name);
+void add_struct_into_table(Type* type, char* name);
 
 // 作用域相关
 void symbol_table_init();
