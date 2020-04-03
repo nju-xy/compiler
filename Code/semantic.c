@@ -8,7 +8,7 @@ void semantic_analyzer(Syntax_Tree_Node_t * root) {
     symbol_table_init();
     semantic_Program(root);
     check_func_table();
-    // print_func_table();
+    print_func_table();
     print_struct_table();
 }
 
@@ -56,23 +56,24 @@ void semantic_ExtDef(Syntax_Tree_Node_t * node) {
     assert(strcmp(node->name, "ExtDef") == 0);
     // 类型
     Type* type = semantic_Specifier(node->first_child);
-    
-    // Log("%s, %s, %d", node->first_child->name, node->first_child->next_sibling->name, node->lineno);
-    // Log("Specifier type");
-    // print_type(ret_type);
-    
+    if(!type)
+        return;
     if(strcmp(node->first_child->next_sibling->name, "ExtDecList") == 0) {
         // 定义全局变量
         semantic_ExtDecList(node->first_child->next_sibling, type);
     }
     else if(strcmp(node->first_child->next_sibling->name, "FunDec") == 0) {
         if(strcmp(nth_child(node, 2)->name, "SEMI") == 0) {
-            // 函数声明
+            // 函数声明 Specifier FunDec SEMI
+            add_scope();
             semantic_FunDec(node->first_child->next_sibling, type, 1);
+            delete_scope();
         }
-        else { // 函数定义
+        else { // 函数定义 Specifier FunDec CompSt
+            add_scope();
             semantic_FunDec(node->first_child->next_sibling, type, 0);
             semantic_CompSt(nth_child(node, 2));
+            delete_scope();
         }
     }
 }
@@ -106,20 +107,30 @@ Type* semantic_StructSpecifier(Syntax_Tree_Node_t * node) {
     assert(strcmp(node->name, "StructSpecifier") == 0);
     if(strcmp(nth_child(node, 1)->name, "LC") == 0) {
         // 创建匿名结构体
-        FieldList* field = semantic_DefList(nth_child(node, 2), 1);
-        return new_type_struct(field);
+        add_scope();
+        semantic_DefList(nth_child(node, 2), 0);
+        delete_scope();
+        return new_type_struct();
     }
     else if(strcmp(nth_child(node, 1)->name, "OptTag") == 0) { 
         // 创建有名字的结构体
+        add_scope();
         char* name = semantic_OptTag(nth_child(node, 1));
-        FieldList* field = semantic_DefList(nth_child(node, 3), 1);
-        Type* type = new_type_struct(field);
+        semantic_DefList(nth_child(node, 3), 0);
+        Type* type = new_type_struct();
         add_struct(type, name, node->lineno);
+        delete_scope();
         return type;
     }
     else { // 创建新的结构体变量
         char* name = semantic_Tag(nth_child(node, 1));
-        TODO();
+        Symbol* sym = find_struct_or_variable(name);
+        if(!sym) {
+            sem_error(17, node->lineno, "直接使用未定义过的结构体来定义变量");
+            return NULL;
+        }
+        assert(sym->type->kind == STRUCTURE);
+        return sym->type;
     }
 }
 
@@ -138,34 +149,40 @@ char* semantic_Tag(Syntax_Tree_Node_t * node) {
 }
 
 void semantic_ExtDecList(Syntax_Tree_Node_t * node, Type* type) {
+    
     // ExtDecList -> VarDec
     //             | VarDec COMMA ExtDecList
     // 全局变量的列表，比如int a, b, c;中的a, b, c
     assert(node);
     assert(strcmp(node->name, "ExtDecList") == 0);
-    semantic_VarDec(node->first_child, type);
+    semantic_VarDec(node->first_child, type, 2);
+    // add_variable(field->type, field->name, node->lineno, 2);
     if(nth_child(node, 1)) {
         semantic_ExtDecList(nth_child(node, 2), type);
     }
 }
 
+
 // Declarators
-FieldList* semantic_VarDec(Syntax_Tree_Node_t * node, Type* type) {
+Type* semantic_VarDec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
     // VarDec -> ID
     //         | VarDec LB INT RB
     // 一个变量（有可能是数组），要么在函数的参数列表中，要么在局部or全局变量的定义中
-    // 返回值是变量VarDec的类型
+    // 返回值是变量VarDec的类型和名字组成的field
     assert(node);
     assert(strcmp(node->name, "VarDec") == 0);
     if(nth_child(node, 1)) {
         int num = nth_child(node, 2)->val.type_int;
         Type* new_type = new_type_array(type, num);
-        return semantic_VarDec(nth_child(node, 0), new_type);
+        return semantic_VarDec(nth_child(node, 0), new_type, struct_para_var);
     }
     else {
-        return new_para(type, NULL, node->first_child->val.id_name);
+        char* name = node->first_child->val.id_name;
+        add_variable(type, name, node->lineno, struct_para_var);
+        return type;
     }
 }
+
 
 void semantic_FunDec(Syntax_Tree_Node_t * node, Type* ret_type, int declare) {
     // FunDec -> ID LP VarList RP
@@ -173,38 +190,34 @@ void semantic_FunDec(Syntax_Tree_Node_t * node, Type* ret_type, int declare) {
     // 函数定义or声明中，类型后面的部分，即函数名和参数
     assert(node);
     assert(strcmp(node->name, "FunDec") == 0);
-
-    FieldList* para = NULL;
     if(nth_child(node, 3)) {
-        para = semantic_VarList(nth_child(node, 2));
+        semantic_VarList(nth_child(node, 2));
     }
 
-    Func* func = new_func(ret_type, para, node->lineno, declare);
+    Func* func = new_func(ret_type, node->lineno, declare);
     add_func(func, node->lineno, node->first_child->val.id_name);
 }
 
-FieldList* semantic_VarList(Syntax_Tree_Node_t * node) {
+void semantic_VarList(Syntax_Tree_Node_t * node) {
     // VarList -> ParamDec COMMA VarList
     //          | ParamDec
     // 函数定义或者声明时的参数列表
     assert(node);
     assert(strcmp(node->name, "VarList") == 0);
-    FieldList* para = semantic_ParamDec(node->first_child);
-    FieldList* next_para = NULL;
+    semantic_ParamDec(node->first_child);
     if(nth_child(node, 1)) {
-        next_para = semantic_VarList(nth_child(node, 2));
-        para->next = next_para;
+        semantic_VarList(nth_child(node, 2));
     }
-    return para;
 }
 
-FieldList* semantic_ParamDec(Syntax_Tree_Node_t * node) {
+void semantic_ParamDec(Syntax_Tree_Node_t * node) {
     // VarList -> Specifier VarDec
     // 函数定义或声明中的一个参数
     assert(node);
     assert(strcmp(node->name, "ParamDec") == 0);
     Type* type = semantic_Specifier(node->first_child);
-    return semantic_VarDec(node->first_child->next_sibling, type);
+    if(type)
+        semantic_VarDec(node->first_child->next_sibling, type, 1);
 }
 
 // Statements
@@ -217,7 +230,7 @@ void semantic_CompSt(Syntax_Tree_Node_t * node) {
     assert(node);
     assert(strcmp(node->name, "CompSt") == 0);
     if(strcmp(nth_child(node, 1)->name, "DefList") == 0) {
-        FieldList* field = semantic_DefList(nth_child(node, 1), 0);
+        semantic_DefList(nth_child(node, 1), 2);
     }
     else if(strcmp(nth_child(node, 1)->name, "StmtList") == 0) {
         semantic_StmtList(nth_child(node, 1));
@@ -256,7 +269,9 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
         semantic_Exp(node->first_child);
     }
     else if(strcmp(node->first_child->name, "CompSt") == 0) {
+        add_scope();
         semantic_CompSt(node->first_child);
+        delete_scope();
     }
     else if(strcmp(node->first_child->name, "RETURN") == 0) {
         semantic_Exp(node->first_child->next_sibling);
@@ -275,72 +290,61 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
 }
 
 // Local Definitions
-FieldList* semantic_DefList(Syntax_Tree_Node_t * node, int in_struct) {
+void semantic_DefList(Syntax_Tree_Node_t * node, int struct_para_var) {
     // DefList -> Def
     //          | Def DefList
     // 函数or结构体里面局部变量定义的列表
     assert(node);
     assert(strcmp(node->name, "DefList") == 0);
     
-    FieldList* field = semantic_Def(node->first_child, in_struct);
-    assert(field);
-    FieldList* tail = field;
-    while(tail->next) {
-        tail = tail->next;
-    }
-    assert(tail);
+    semantic_Def(node->first_child, struct_para_var);
 
     if(nth_child(node, 1)) {
-        FieldList* next_field = semantic_DefList(nth_child(node, 1), in_struct);
-        tail->next = next_field;
+       semantic_DefList(nth_child(node, 1), struct_para_var);
     }
-    return field;
 }
 
-FieldList* semantic_Def(Syntax_Tree_Node_t * node, int in_struct) {
+void semantic_Def(Syntax_Tree_Node_t * node, int struct_para_var) {
     // Def -> Specifier DecList SEMI
     // 函数or结构体里面的一行局部变量定义
     assert(node);
     assert(strcmp(node->name, "Def") == 0);
 
     Type* type = semantic_Specifier(node->first_child);
-    return semantic_DecList(node->first_child->next_sibling, type, in_struct);
+    if(type)
+        semantic_DecList(node->first_child->next_sibling, type, struct_para_var);
 }
 
-FieldList* semantic_DecList(Syntax_Tree_Node_t * node, Type* type, int in_struct) {
+void semantic_DecList(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
     // DecList -> Dec
     //          | Dec COMMA DecList
     // 函数or结构体内局部变量声明中以逗号间隔的变量列表
     assert(node);
     assert(strcmp(node->name, "DecList") == 0);
 
-    FieldList* field = semantic_Dec(node->first_child, type, in_struct);
-    assert(field);
+    semantic_Dec(node->first_child, type, struct_para_var);
     
     if(node->first_child->next_sibling) {
-        FieldList* next_field = semantic_DecList(nth_child(node, 2), type, in_struct);
-        assert(next_field);
-        field->next = next_field;
+        semantic_DecList(nth_child(node, 2), type, struct_para_var);
     }
-    return field;
 }
 
-FieldList* semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int in_struct) {
+void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
     // Dec -> VarDec
     //     | VarDec ASSIGNOP Exp
     // 一个变量or变量+赋值
     assert(node);
     assert(strcmp(node->name, "Dec") == 0);
 
-    FieldList* field = semantic_VarDec(node->first_child, type);
-    
+    semantic_VarDec(node->first_child, type, struct_para_var);
     if(node->first_child->next_sibling) {
-        semantic_Exp(nth_child(node, 2));
+        if(struct_para_var == 0) {
+            sem_error(15, node->lineno, "结构体定义时对域进行初始化");
+        }
+        else
+            semantic_Exp(nth_child(node, 2));
     }
-    if(!in_struct) {
-        add_variable(field->type, field->name, node->lineno);
-    }
-    return field;
+    // add_variable(field->type, field->name, node->lineno, struct_para_var);
 }
 
 // Expressions

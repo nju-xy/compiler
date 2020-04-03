@@ -22,10 +22,26 @@ Type* new_type_array(Type* elem, int num) {
     return new_arr;
 }
 
-Type* new_type_struct(FieldList* field) {
+Type* new_type_struct() {
     Type* new_struct = (Type*)malloc(sizeof(Type));
     new_struct->kind = STRUCTURE;
-    new_struct->field = field;
+    // 域都存在此时的符号表的最新一层作用域内
+    Symbol* sym = scope_head->first_symbol;
+    FieldList* field = NULL;
+    new_struct->field = NULL;
+    while(sym) {
+        FieldList* next_field = new_field(sym->type, sym->name);
+        if(!field) {
+            new_struct->field = field = next_field;
+        }
+        else {
+            field->next = next_field;
+            field = next_field;
+        }
+        sym = sym->next_in_scope;
+    }
+    return new_struct;
+
     return new_struct;
 }
 
@@ -86,24 +102,65 @@ int same_type(Type* t1, Type* t2) {
     return 1;
 }
 
-FieldList* new_para(Type* type, FieldList* next, char* name) {
+FieldList* new_field(Type* type, char* name) {
     FieldList* para = (FieldList*)malloc(sizeof(FieldList));
     para->type = type;
-    para->next = next;
+    para->next = NULL;
     para->name = name;
     return para;
 }
 
-Func* new_func(Type* ret_type, FieldList* para, int lineno, int declare) {
+FieldList* add_field(FieldList* field_list, Type* type, char* name, int in_para, int lineno) { 
+    //Log("before add_field, %d", lineno);
+    // 在field_list的最后加上参数一个(type, name)的field
+    FieldList* field = (FieldList*)malloc(sizeof(FieldList));
+    field->type = type;
+    field->next = NULL;
+    field->name = name;
+
+    assert(field_list);
+
+    FieldList* cur = field_list;
+    while(1) {
+        if(!in_para) { // 在结构体里面，重名就要报错的
+            if(cur->name && strcmp(cur->name, name) == 0) {
+                sem_error(15, lineno, "同一个结构体中域名重复定义");
+                return field_list;
+            }
+        }
+        if(!cur->next)
+            break;
+        cur = cur->next;
+    }
+    cur->next = field;
+    //Log("after add_field");
+    return field_list;
+}
+
+Func* new_func(Type* ret_type, int lineno, int declare) {
+    // 参数都存在此时的符号表的最新一层作用域内
     Func* func = (Func*)malloc(sizeof(Func));
-    func->para = para;
     func->ret_type = ret_type;
     func->lineno = lineno;
     if(declare)
         func->def = 0;
     else 
         func->def = 1;
-    // print_func(func);
+    Symbol* sym = scope_head->first_symbol;
+
+    FieldList* para = NULL;
+    func->para = NULL;
+    while(sym) {
+        FieldList* next_para = new_field(sym->type, sym->name);
+        if(!para) {
+            func->para = para = next_para;
+        }
+        else {
+            para->next = next_para;
+            para = next_para;
+        }
+        sym = sym->next_in_scope;
+    }
     return func;
 }
 
@@ -112,7 +169,7 @@ void print_func_table() {
     Symbol* sym = scope_func->first_symbol;
     while(sym) {
         Log("Func name: %s", sym->name);
-        print_func(sym->func);
+        // print_func(sym->func);
         sym = sym->next_in_scope;
     }
 }
@@ -169,10 +226,11 @@ int same_struct(FieldList* field1, FieldList* field2) {
 
 
 void print_struct_table() {
+    //Log("struct table:");
     Symbol* sym = scope_struct->first_symbol;
     while(sym) {
         Log("struct name: %s", sym->name);
-        print_type(sym->type);
+        //print_type(sym->type);
         sym = sym->next_in_scope;
     }
 }

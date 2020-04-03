@@ -31,6 +31,14 @@ void add_scope() {
 void delete_scope() {
     assert(scope_head);
     Scope* cur = scope_head;
+
+    Symbol* sym = cur->first_symbol;
+    while(sym) {
+        assert(hash_table[hash(sym->name)] == sym);
+        // 删除的一定是在哈希表的头部
+        hash_table[hash(sym->name)] = sym->next_in_hash;
+        sym = sym->next_in_scope;
+    }
     scope_head = scope_head->next;
     nr_scope--;
     free(cur);
@@ -98,9 +106,9 @@ void add_struct(Type* type, char* name, int lineno) {
     }
     else {
         if(old_sym->kind == symbol_STRUCTURE)
-            sem_error(15, lineno, "结构体的名字与前面定义过的结构体或变量的名字重复");
+            sem_error(16, lineno, "结构体的名字与前面定义过的结构体或变量的名字重复");
         else if(old_sym->kind == symbol_VARIABLE)
-            sem_error(15, lineno, "结构体的名字与前面定义过的变量的名字重复");
+            sem_error(16, lineno, "结构体的名字与前面定义过的变量的名字重复");
         else {
             // 结构体和函数重名，不管
         }
@@ -155,24 +163,49 @@ void add_sym_into_table(Symbol* sym) {
     }
 }
 
-void add_variable(Type* type, char* name, int lineno) {
-    Log("add variable %s", name);
+void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
+    // 变量和函数重名，不管
     Symbol* old_sym = find_struct_or_variable(name);
     if(old_sym == NULL) {
         add_variable_into_table(type, name, lineno);
     }
     else {
-        if(old_sym->kind == symbol_STRUCTURE)
-            sem_error(3, lineno, "变量与前面定义过的结构体名字重复");
-        else if(old_sym->kind == symbol_VARIABLE)
-            sem_error(3, lineno, "变量出现重复定义");
-        else {
-            // 变量和函数重名，不管
+        if(struct_para_var == 0) {
+            // 正在添加的是结构体中的域
+            if(old_sym->kind == symbol_VARIABLE && old_sym->scope_num == CUR_SCOPE) {
+                sem_error(15, lineno, "结构体中域名重复定义");
+                Log("%s, %s", old_sym->name, name);
+            }
+            else {
+                add_variable_into_table(type, name, lineno);
+            }
         }
+        else if(struct_para_var == 0) {
+            if(old_sym->kind == symbol_VARIABLE && old_sym->scope_num == CUR_SCOPE) {
+                sem_error(3, lineno, "变量（函数参数）出现重复定义");    
+            }
+            else {
+                add_variable_into_table(type, name, lineno);
+            }
+        }
+        else {
+            if(old_sym->kind == symbol_STRUCTURE) {
+                sem_error(3, lineno, "变量与前面定义过的结构体名字重复");
+            }
+            else if(old_sym->kind == symbol_VARIABLE && old_sym->scope_num == CUR_SCOPE) {
+                sem_error(3, lineno, "同一作用域内变量出现重复定义");
+            }
+            else {
+                add_variable_into_table(type, name, lineno);
+            }
+        }
+
     }
 }
 
 void add_variable_into_table(Type* type, char* name, int lineno) {
+    Log("new variable: %s", name);
+    print_type(type);
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->name = name;
     sym->kind = symbol_VARIABLE;

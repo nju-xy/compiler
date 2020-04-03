@@ -50,7 +50,7 @@ Symbol* find_struct_or_variable(char* name);
 void add_struct_into_table(Type* type, char* name, int lineno);
 
 // 变量相关
-void add_variable(Type* type, char* name, int lineno);
+void add_variable(Type* type, char* name, int lineno, int struct_para_var);
 void add_variable_into_table(Type* type, char* name, int lineno);
 
 // 作用域相关
@@ -63,5 +63,6 @@ void print_scope(Scope* head);
 void add_sym_into_table(Symbol* sym);
 
 int nr_scope;
+#define CUR_SCOPE (nr_scope - 1)
 
 #endif
