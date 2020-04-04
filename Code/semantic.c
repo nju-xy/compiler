@@ -8,8 +8,8 @@ void semantic_analyzer(Syntax_Tree_Node_t * root) {
     symbol_table_init();
     semantic_Program(root);
     check_func_table();
-    print_func_table();
-    print_struct_table();
+    // print_func_table();
+    // print_struct_table();
 }
 
 void check_func_table() {
@@ -287,18 +287,21 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
         }
     }
     else if(strcmp(node->first_child->name, "IF") == 0) {
+        // IF LP Exp RP Stmt
+        // IF LP Exp RP Stmt ELSE Stmt
         Type* type = semantic_Exp(nth_child(node, 2));
         if(nth_child(node, 5)) {
             semantic_Stmt(nth_child(node, 6));
         }
-        if(type || type->kind != BASIC || type->basic != BASIC_INT) {
+        if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
             sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
         }
     }
     else if(strcmp(node->first_child->name, "WHILE") == 0) {
+        // WHILE LP EXP RP Stmt
         Type* type = semantic_Exp(nth_child(node, 2));
-        if(type || type->kind != BASIC || type->basic != BASIC_INT) {
-            sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
+        if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
+            sem_error(7, node->lineno, "操作数类型与操作符WHILE不匹配");
         }
         semantic_Stmt(nth_child(node, 4));
     }
@@ -445,7 +448,8 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "RELOP") == 0) {
         // Exp RELOP Exp
-        return exp_2_op_algorithm(node);
+        exp_2_op_algorithm(node);
+        return new_type_int();
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "PLUS") == 0) {
         // Exp PLUS Exp

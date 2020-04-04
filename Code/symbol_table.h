@@ -36,7 +36,8 @@ Scope* scope_func;
 
 // 哈希
 #define SIZE_OF_HASH 0x3fff
-Symbol * hash_table[SIZE_OF_HASH];
+Symbol * var_table[SIZE_OF_HASH];
+Symbol * global_table[SIZE_OF_HASH];
 unsigned int hash(char* name);
 
 // 函数相关
@@ -61,8 +62,14 @@ void delete_scope();
 void print_scope(Scope* head);
 
 // 符号表的加入
-void add_sym_into_table(Symbol* sym);
+void add_sym_into_var_table(Symbol* sym);
+void add_sym_into_global_table(Symbol* sym);
 
+// 删除相关
+// void free_sym(Symbol* sym);
+
+
+// 作用域标号
 int nr_scope;
 #define CUR_SCOPE (nr_scope - 1)
 

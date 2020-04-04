@@ -8,10 +8,12 @@ void symbol_table_init() {
     add_scope(); // 第1层结构体用
     scope_struct = scope_head;
     add_scope(); // 第2层全局变量用
-    memset(hash_table, 0, sizeof(hash_table));
+    memset(var_table, 0, sizeof(var_table));
+    memset(global_table, 0, sizeof(global_table));
 }
 
 unsigned int hash(char* name) {
+    return 0;
     unsigned int val = 0, i;
     for(; *name; ++name) {
         val = (val << 2) + *name;
@@ -24,9 +26,10 @@ unsigned int hash(char* name) {
 void add_scope() {
     Scope* cur = (Scope*)malloc(sizeof(Scope));
     cur->no = nr_scope;
-    nr_scope++;
+    cur->first_symbol = NULL;
     cur->next = scope_head;
     scope_head = cur;
+    nr_scope++;
 }
 
 void delete_scope() {
@@ -35,15 +38,60 @@ void delete_scope() {
 
     Symbol* sym = cur->first_symbol;
     while(sym) {
-        assert(hash_table[hash(sym->name)] == sym);
-        // 删除的一定是在哈希表的头部
-        hash_table[hash(sym->name)] = sym->next_in_hash;
+        assert(sym->kind == symbol_VARIABLE);
+        assert(var_table[hash(sym->name)] == sym);
+        var_table[hash(sym->name)] = sym->next_in_hash;
+        // free_sym(sym);
         sym = sym->next_in_scope;
     }
     scope_head = scope_head->next;
     nr_scope--;
-    free(cur);
+    // free(cur);
 }
+
+// void free_sym(Symbol* sym) {
+//     if(!sym)
+//         return;
+//     if(sym->name) 
+//         free(sym->name);
+//     if(sym->type != symbol_FUNC) {
+//         free_type(sym->type);
+//     }
+//     else {
+//         free_func(sym->func);
+//     }
+// }
+
+// void free_type(Type* type) {
+//     if(!type)
+//         return;
+//     if(type->kind == ARRAY) {
+//         if(type->array.elem)
+//             free(type->array.elem);
+//     }
+//     else if(type->kind == STRUCTURE) {
+//         free_fieldlist(type->field);
+//     }
+// }
+
+// void free_fieldlist(FieldList* field) {
+//     while(field) {
+//         if(field->name)
+//             free(field->name);
+//         FieldList* field_next = field->next;
+//         free(field);
+//         field = field_next;
+//     }
+// }
+
+// void free_func(Func* func) {
+//     if(!func)
+//         return;
+//     if(func->ret_type)
+//         free_type(func->ret_type);
+//     if(func->para)
+//         free_fieldlist(func->para);
+// }
 
 void print_scope(Scope* head) {
     if(!head) {
@@ -59,8 +107,9 @@ void add_func_into_table(Func* func, char* name) {
     sym->kind = symbol_FUNC;
     sym->func = func;
     sym->scope_num = 0;
-    // sym->lineno = sym->func->lineno;
-    add_sym_into_table(sym);
+    sym->next_in_hash = sym->next_in_scope = NULL;
+    sym->lineno = sym->func->lineno;
+    add_sym_into_global_table(sym);
 }
 
 void add_func(Func* func, int lineno, char* name) {
@@ -87,7 +136,7 @@ void add_func(Func* func, int lineno, char* name) {
 }
 
 Symbol* find_func(char* name) {
-    Symbol* sym = hash_table[hash(name)];
+    Symbol* sym = global_table[hash(name)];
     while(sym) {
         // Log("find %d, %s", sym->kind == symbol_FUNC, sym->name);
         if(sym->kind == symbol_FUNC && strcmp(name, sym->name) == 0)
@@ -118,10 +167,19 @@ void add_struct(Type* type, char* name, int lineno) {
 }
 
 Symbol* find_struct_or_variable(char* name) {
-    Symbol* sym = hash_table[hash(name)];
+    // 找全局表
+    Symbol* sym = global_table[hash(name)];
     while(sym) {
         // Log("find %d, %s", sym->kind == symbol_FUNC, sym->name);
         if(sym->kind != symbol_FUNC && strcmp(name, sym->name) == 0)
+            return sym;
+        sym = sym->next_in_hash;
+    }
+    // 找变量表
+    sym = var_table[hash(name)];
+    while(sym) {
+        // Log("find %d, %s", sym->kind == symbol_FUNC, sym->name);
+        if(strcmp(name, sym->name) == 0)
             return sym;
         sym = sym->next_in_hash;
     }
@@ -136,20 +194,22 @@ void add_struct_into_table(Type* type, char* name, int lineno) {
     sym->type = type;
     sym->scope_num = 1;
     sym->lineno = lineno;
-    add_sym_into_table(sym);
+    sym->next_in_hash = sym->next_in_scope = NULL;
+    add_sym_into_global_table(sym);
 }
 
 
-void add_sym_into_table(Symbol* sym) {
+void add_sym_into_var_table(Symbol* sym) {
     // 横向
-    if(!hash_table[hash(sym->name)]) {
-        hash_table[hash(sym->name)] = sym;
+    if(!var_table[hash(sym->name)]) {
+        var_table[hash(sym->name)] = sym;
     }
     else {
-        sym->next_in_hash = hash_table[hash(sym->name)];
-        hash_table[hash(sym->name)] = sym;
+        sym->next_in_hash = var_table[hash(sym->name)];
+        var_table[hash(sym->name)] = sym;
     }
     // 纵向
+    assert(sym->kind == symbol_VARIABLE);
     if(sym->kind == symbol_FUNC) {
         sym->next_in_scope = scope_func->first_symbol;
         scope_func->first_symbol = sym;
@@ -161,6 +221,33 @@ void add_sym_into_table(Symbol* sym) {
     else {
         sym->next_in_scope = scope_head->first_symbol;
         scope_head->first_symbol = sym;
+        // Log("add sym %s", sym->name);
+    }
+}
+
+void add_sym_into_global_table(Symbol* sym) {
+    // 横向
+    if(!global_table[hash(sym->name)]) {
+        global_table[hash(sym->name)] = sym;
+    }
+    else {
+        sym->next_in_hash = global_table[hash(sym->name)];
+        global_table[hash(sym->name)] = sym;
+    }
+    // 纵向
+    assert(sym->kind != symbol_VARIABLE);
+    if(sym->kind == symbol_FUNC) {
+        sym->next_in_scope = scope_func->first_symbol;
+        scope_func->first_symbol = sym;
+    }
+    else if(sym->kind == symbol_STRUCTURE) {
+        sym->next_in_scope = scope_struct->first_symbol;
+        scope_struct->first_symbol = sym;
+    }
+    else {
+        sym->next_in_scope = scope_head->first_symbol;
+        scope_head->first_symbol = sym;
+        Log("add sym %s", sym->name);
     }
 }
 
@@ -175,7 +262,7 @@ void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
             // 正在添加的是结构体中的域
             if(old_sym->kind == symbol_VARIABLE && old_sym->scope_num == CUR_SCOPE) {
                 sem_error(15, lineno, "结构体中域名重复定义");
-                Log("%s, %s", old_sym->name, name);
+                // Log("%s, %s", old_sym->name, name);
             }
             else {
                 add_variable_into_table(type, name, lineno);
@@ -213,5 +300,6 @@ void add_variable_into_table(Type* type, char* name, int lineno) {
     sym->type = type;
     sym->scope_num = nr_scope - 1;
     sym->lineno = lineno;
-    add_sym_into_table(sym);
+    sym->next_in_hash = sym->next_in_scope = NULL;
+    add_sym_into_var_table(sym);
 }
