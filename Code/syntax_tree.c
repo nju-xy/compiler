@@ -100,6 +100,8 @@ Syntax_Tree_Node_t * nth_child(Syntax_Tree_Node_t * node, int n) {
     // 返回第n个儿子，n从0开始计数
     Syntax_Tree_Node_t * ret = node->first_child;
     for(int i = 0; i < n; ++i) {
+        if(!ret)
+            return NULL;
         ret = ret->next_sibling;
     }
     return ret;

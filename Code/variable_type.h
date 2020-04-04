@@ -62,6 +62,7 @@ FieldList* add_field(FieldList* field_list, Type* type, char* name, int in_para,
 FieldList* new_field(Type* type, char* name);
 int same_func(Func* func1, Func* func2);
 int same_struct(FieldList* field1, FieldList* field2);
+Type* find_field(Type* type, char* name);
 
 void print_func_table();
 void print_struct_table();

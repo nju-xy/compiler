@@ -40,6 +40,7 @@ Symbol * hash_table[SIZE_OF_HASH];
 unsigned int hash(char* name);
 
 // 函数相关
+Type* last_ret_type;
 void add_func(Func* func, int lineno, char* name);
 Symbol* find_func(char* name);
 void add_func_into_table(Func* func, char* name);

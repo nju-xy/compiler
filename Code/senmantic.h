@@ -25,7 +25,13 @@ void semantic_Stmt(Syntax_Tree_Node_t * node);
 void semantic_Def(Syntax_Tree_Node_t * node, int struct_para_var);
 void semantic_DecList(Syntax_Tree_Node_t * node, Type* type, int struct_para_var);
 void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int in_struct);
-void semantic_Exp(Syntax_Tree_Node_t * node);
+Type* semantic_Exp(Syntax_Tree_Node_t * node);
+int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para);
 
+Type* exp_2_op_algorithm(Syntax_Tree_Node_t * node);
+Type* exp_2_op_logic(Syntax_Tree_Node_t * node);
+Type* exp_1_op_algorithm(Syntax_Tree_Node_t * node);
+Type* exp_1_op_logic(Syntax_Tree_Node_t * node);
+int check_right_value(Syntax_Tree_Node_t* node);
 
 #endif

@@ -62,6 +62,10 @@ Type* new_type_struct() {
 // }
 
 void print_type(Type* elem) {
+    if(!elem) {
+        Log("NonType");
+        return;
+    }
     if(elem->kind == BASIC) {
         if(elem->basic == BASIC_INT) 
             Log("int");
@@ -85,6 +89,9 @@ void print_type(Type* elem) {
 }
 
 int same_type(Type* t1, Type* t2) {
+    assert(t1);
+    assert(t2);
+    // Log("%d, %d", t1->kind, t2->kind);
     if(t1->kind != t2->kind)
         return 0;
     if(t1->kind == BASIC) {
@@ -148,16 +155,15 @@ Func* new_func(Type* ret_type, int lineno, int declare) {
         func->def = 1;
     Symbol* sym = scope_head->first_symbol;
 
-    FieldList* para = NULL;
     func->para = NULL;
     while(sym) {
-        FieldList* next_para = new_field(sym->type, sym->name);
-        if(!para) {
-            func->para = para = next_para;
+        FieldList* new_para = new_field(sym->type, sym->name);
+        if(!func->para) {
+            func->para = new_para;
         }
-        else {
-            para->next = next_para;
-            para = next_para;
+        else { // 注意新的参数加在头部
+            new_para->next = func->para;
+            func->para = new_para;
         }
         sym = sym->next_in_scope;
     }
@@ -233,4 +239,15 @@ void print_struct_table() {
         //print_type(sym->type);
         sym = sym->next_in_scope;
     }
+}
+
+Type* find_field(Type* type, char* name) {
+    assert(type->kind == STRUCTURE);
+    FieldList* field = type->field;
+    while(field) {
+        if(strcmp(field->name, name) == 0)
+            return field->type;
+        field = field->next;
+    }
+    return NULL;
 }

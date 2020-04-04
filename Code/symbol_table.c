@@ -1,6 +1,7 @@
 #include "common.h"
 
 void symbol_table_init() {
+    last_ret_type = NULL;
     nr_scope = 0;
     add_scope(); // 第0层给函数用
     scope_func = scope_head;
@@ -204,8 +205,8 @@ void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
 }
 
 void add_variable_into_table(Type* type, char* name, int lineno) {
-    Log("new variable: %s", name);
-    print_type(type);
+    // Log("new variable: %s", name);
+    // print_type(type);
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->name = name;
     sym->kind = symbol_VARIABLE;
