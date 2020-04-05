@@ -7,8 +7,6 @@
 #include <stdarg.h>
 // #include <assert.h>
 
-#define DEBUG
-
 #include "debug.h"
 #include "syntax_tree.h"
 #include "symbol_table.h"

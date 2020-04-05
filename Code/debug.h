@@ -3,17 +3,6 @@
 
 #include "common.h"
 
-
-#ifdef DEBUG
-#	define Log_write(format, ...) \
-  do { \
-      fprintf(stderr, format, ## __VA_ARGS__); \
-      fflush(stderr); \
-  } while (0)
-#else
-#	define Log_write(format, ...)
-#endif
-
 #define printflog(format, ...) \
   do { \
     printf(format, ## __VA_ARGS__); \

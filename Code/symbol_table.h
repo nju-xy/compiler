@@ -36,8 +36,8 @@ Scope* scope_func;
 
 // 哈希
 #define SIZE_OF_HASH 0x3fff
-Symbol * var_table[SIZE_OF_HASH];
-Symbol * global_table[SIZE_OF_HASH];
+Symbol * var_table[SIZE_OF_HASH + 1];
+Symbol * global_table[SIZE_OF_HASH + 1];
 unsigned int hash(char* name);
 
 // 函数相关

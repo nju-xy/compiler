@@ -16,7 +16,7 @@ void check_func_table() {
     Symbol* sym = scope_func->first_symbol;
     while(sym) {
         if(!sym->func) {
-            Log("%d", sym->kind);
+            // Log("%d", sym->kind);
             assert(0);
         }
         if(!sym->func->def) {
@@ -134,7 +134,7 @@ Type* semantic_StructSpecifier(Syntax_Tree_Node_t * node) {
         Symbol* sym = find_struct_or_variable(name);
         if(!sym) {
             sem_error(17, node->lineno, "直接使用未定义过的结构体来定义变量");
-            return NULL;
+            return new_type_int();
         }
         assert(sym->type->kind == STRUCTURE);
         return sym->type;
@@ -290,12 +290,12 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
         // IF LP Exp RP Stmt
         // IF LP Exp RP Stmt ELSE Stmt
         Type* type = semantic_Exp(nth_child(node, 2));
-        if(nth_child(node, 5)) {
-            semantic_Stmt(nth_child(node, 6));
-        }
         if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
             sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
         }
+        semantic_Stmt(nth_child(node, 4));
+        if(nth_child(node, 5))
+            semantic_Stmt(nth_child(node, 6));
     }
     else if(strcmp(node->first_child->name, "WHILE") == 0) {
         // WHILE LP EXP RP Stmt
@@ -424,12 +424,13 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
     if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "ASSIGNOP") == 0) {
         // Exp ASSIGNOP Exp
         int is_right_value = check_right_value(node->first_child);
-        if(is_right_value) {
-            sem_error(6, node->lineno, "赋值号左边出现一个只有右值的表达式");
-            return NULL;
-        }
         Type* type1 = semantic_Exp(node->first_child);
         Type* type2 = semantic_Exp(nth_child(node, 2));
+        // Log("lineno:%d, type1:%d, type2:%d", node->lineno, type1->kind, type2->kind);
+        if(is_right_value) {
+            sem_error(6, node->lineno, "赋值号左边出现一个只有右值的表达式");
+            return type1;
+        }
         if(!type1 || !type2) {
             sem_error(5, node->lineno, "由于之前的错误，赋值号两边的表达式类型不匹配");
         }
@@ -485,7 +486,7 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
             Symbol* sym = find_struct_or_variable(node->first_child->val.id_name);
             if(!sym || sym->kind != symbol_VARIABLE) {
                 sem_error(1, node->lineno, "变量在使用时未经定义");
-                return NULL;
+                return new_type_int();
             }
             else {
                 return sym->type;
@@ -494,11 +495,14 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
         else { // 函数调用
             Symbol* func_sym = find_func(node->first_child->val.id_name);
             if(!func_sym) {
-                if(find_struct_or_variable(node->first_child->val.id_name)) 
+                Symbol* other_sym = find_struct_or_variable(node->first_child->val.id_name);
+                if(other_sym) {
                     sem_error(11, node->lineno, "对普通变量使用'(...)'或'()'(函数调用)操作符");
+                    return other_sym->type;
+                }
                 else 
                     sem_error(2, node->lineno, "函数在调用时未经定义");
-                return NULL;
+                return new_type_int();
             }
             
             Func* func = func_sym->func;
@@ -508,7 +512,6 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
                 int ret = semantic_Args(nth_child(node, 2), func->para);
                 if(!ret) {
                     sem_error(9, node->lineno, "函数调用时实参与形参的数目或类型不匹配");
-                    return NULL;
                 }
             }
             else {
@@ -517,7 +520,6 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
                 if(func->para != NULL) {
                     sem_error(9, node->lineno, "函数调用时实参与形参的数目或类型不匹配");
                 }
-                return NULL;
             }
             return func->ret_type;
         }
@@ -536,12 +538,12 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
         Type* type = semantic_Exp(node->first_child);
         if(!type || type->kind != STRUCTURE) {
             sem_error(13, node->lineno, "对非结构体型变量使用'.'操作符");
-            return NULL;
+            return type;
         }
         Type* type2 = find_field(type, nth_child(node, 2)->val.id_name);
         if(!type2) {
             sem_error(14, node->lineno, "访问结构体中未定义过的域");
-            return NULL;
+            return new_type_int();
         }
         return type2;
     }
@@ -553,19 +555,17 @@ Type* semantic_Exp(Syntax_Tree_Node_t * node) {
         Type* type2 = semantic_Exp(nth_child(node, 2));
         if(!type1) {
             sem_error(10, node->lineno, "由于之前的错误，对非数组型变量使用'[...]'(数组访问)操作符");
-            return NULL;
+            return new_type_int();
         }
         else if(type1->kind != ARRAY) {
             sem_error(10, node->lineno, "对非数组型变量使用'[...]'(数组访问)操作符");
-            return NULL;
+            return type1;
         }
         if(!type2) {
             sem_error(12, node->lineno, "由于之前的错误，数组访问操作符'[...]'中出现非整数");
-            return NULL;
         }
         else if(type2->kind != BASIC || type2->basic != BASIC_INT) {
             sem_error(12, node->lineno, "数组访问操作符'[...]'中出现非整数");
-            return NULL;
         }
         return type1->array.elem;
         //Log("数组结束");
