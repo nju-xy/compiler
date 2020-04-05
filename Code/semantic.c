@@ -38,7 +38,8 @@ void semantic_Program(Syntax_Tree_Node_t * node) {
 }
 
 void semantic_ExtDefList(Syntax_Tree_Node_t * node) {
-    // ExtDefList -> ExtDef ExtDefList | epsilon
+    // ExtDefList -> ExtDef ExtDefList 
+    //             | ExtDef
     assert(node);
     assert(strcmp(node->name, "ExtDefList") == 0);
     semantic_ExtDef(node->first_child);
@@ -156,7 +157,6 @@ char* semantic_Tag(Syntax_Tree_Node_t * node) {
 }
 
 void semantic_ExtDecList(Syntax_Tree_Node_t * node, Type* type) {
-    
     // ExtDecList -> VarDec
     //             | VarDec COMMA ExtDecList
     // 全局变量的列表，比如int a, b, c;中的a, b, c
@@ -178,12 +178,12 @@ Type* semantic_VarDec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var
     // 返回值是变量VarDec的类型和名字组成的field
     assert(node);
     assert(strcmp(node->name, "VarDec") == 0);
-    if(nth_child(node, 1)) {
+    if(nth_child(node, 1)) { // VarDec LB INT RB
         int num = nth_child(node, 2)->val.type_int;
         Type* new_type = new_type_array(type, num);
         return semantic_VarDec(nth_child(node, 0), new_type, struct_para_var);
     }
-    else {
+    else { // ID
         char* name = node->first_child->val.id_name;
         add_variable(type, name, node->lineno, struct_para_var);
         return type;
@@ -272,10 +272,10 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
     assert(node);
     assert(strcmp(node->name, "Stmt") == 0);
 
-    if(strcmp(node->first_child->name, "Exp") == 0) {
+    if(strcmp(node->first_child->name, "Exp") == 0) { // Exp SEMI
         semantic_Exp(node->first_child);
     }
-    else if(strcmp(node->first_child->name, "CompSt") == 0) {
+    else if(strcmp(node->first_child->name, "CompSt") == 0) { 
         add_scope();
         semantic_CompSt(node->first_child);
         delete_scope();
@@ -357,10 +357,10 @@ void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
 
     Type* type1 = semantic_VarDec(node->first_child, type, struct_para_var);
     if(node->first_child->next_sibling) {
-        if(struct_para_var == 0) {
+        if(struct_para_var == 0) { // 结构体
             sem_error(15, node->lineno, "结构体定义时对域进行初始化");
         }
-        else {
+        else { // 变量
             Type* type2 = semantic_Exp(nth_child(node, 2));
             if(!type1 || !type2) {
                 sem_error(7, node->lineno, "由于之前的错误，赋值号两边的表达式类型不匹配");
