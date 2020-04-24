@@ -1,0 +1,23 @@
+int main(){
+
+	struct out{
+		struct in{
+			int same;
+		}same;
+	}same;
+
+	{
+		struct another{
+			int same;	
+		}same;
+		same.same = 1;
+	}
+	{
+		struct yetanother{
+			struct out same;
+		}same;
+		same.same.same.same = 1;
+	}
+
+	same.same.same = 1;
+}

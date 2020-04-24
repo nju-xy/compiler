@@ -13,7 +13,7 @@ void symbol_table_init() {
 }
 
 unsigned int hash(char* name) {
-    //return 0;
+    // return 0;
     unsigned int val = 0, i;
     for(; *name; ++name) {
         val = (val << 2) + *name;
@@ -33,7 +33,7 @@ void add_scope() {
     nr_scope++;
 }
 
-void delete_scope() {
+void delete_scope(int if_free) {
     assert(scope_head);
     Scope* cur = scope_head;
 
@@ -42,26 +42,30 @@ void delete_scope() {
         assert(sym->kind == symbol_VARIABLE);
         assert(var_table[hash(sym->name)] == sym);
         var_table[hash(sym->name)] = sym->next_in_hash;
-        // free_sym(sym);
+        if(if_free)
+            free_sym(sym);
         sym = sym->next_in_scope;
     }
     scope_head = scope_head->next;
     nr_scope--;
-    // free(cur);
+    free(cur);
 }
 
-// void free_sym(Symbol* sym) {
-//     if(!sym)
-//         return;
-//     if(sym->name) 
-//         free(sym->name);
-//     if(sym->type != symbol_FUNC) {
-//         free_type(sym->type);
-//     }
-//     else {
-//         free_func(sym->func);
-//     }
-// }
+void free_sym(Symbol* sym) {
+    if(!sym)
+        return;
+    if(sym->name) {
+        free(sym->name);
+        sym->name = NULL;
+    }
+    free(sym);
+    // if(sym->type != symbol_FUNC) {
+    //     free_type(sym->type);
+    // }
+    // else {
+    //     free_func(sym->func);
+    // }
+}
 
 // void free_type(Type* type) {
 //     if(!type)
@@ -151,10 +155,10 @@ Symbol* find_func(char* name) {
 
 // 结构体相关
 void add_struct(Type* type, char* name, int lineno) {
-    // Log("add struct");
     Symbol* old_sym = find_struct_or_variable(name);
     if(old_sym == NULL) {
         add_struct_into_table(type, name, lineno);
+        // Log("add struct %s", name);
     }
     else {
         if(old_sym->kind == symbol_STRUCTURE)
@@ -251,13 +255,19 @@ void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
                 sem_error(15, lineno, "结构体中域名重复定义");
                 // Log("%s, %s", old_sym->name, name);
             }
+            else if(old_sym->kind == symbol_STRUCTURE) {
+                sem_error(3, lineno, "变量（域名）与前面定义过的结构体名字重复");
+            }
             else {
                 add_variable_into_table(type, name, lineno);
             }
         }
-        else if(struct_para_var == 0) {
+        else if(struct_para_var == 1) {
             if(old_sym->kind == symbol_VARIABLE && old_sym->scope_num == CUR_SCOPE) {
                 sem_error(3, lineno, "变量（函数参数）出现重复定义");    
+            }
+            else if(old_sym->kind == symbol_STRUCTURE) {
+                sem_error(3, lineno, "变量（函数参数）与前面定义过的结构体名字重复");
             }
             else {
                 add_variable_into_table(type, name, lineno);

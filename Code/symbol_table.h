@@ -58,7 +58,7 @@ void add_variable_into_table(Type* type, char* name, int lineno);
 // 作用域相关
 void symbol_table_init();
 void add_scope();
-void delete_scope();
+void delete_scope(int if_free);
 void print_scope(Scope* head);
 
 // 符号表的加入
@@ -66,8 +66,10 @@ void add_sym_into_var_table(Symbol* sym);
 void add_sym_into_global_table(Symbol* sym);
 
 // 删除相关
-// void free_sym(Symbol* sym);
-
+void free_sym(Symbol* sym);
+// void free_type(Type* type);
+// void free_func(Func* func);
+// void free_fieldlist(FieldList* field);
 
 // 作用域标号
 int nr_scope;

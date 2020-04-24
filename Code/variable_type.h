@@ -66,9 +66,6 @@ Type* find_field(Type* type, char* name);
 
 void print_func_table();
 void print_struct_table();
-
-// void free_type(Type* type);
-// void free_func(Func* func);
-// void free_fieldlist(FieldList* field);
+int cnt;
 
 #endif

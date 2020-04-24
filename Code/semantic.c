@@ -68,7 +68,7 @@ void semantic_ExtDef(Syntax_Tree_Node_t * node) {
             // 函数声明 Specifier FunDec SEMI
             add_scope();
             semantic_FunDec(node->first_child->next_sibling, type, 1);
-            delete_scope();
+            delete_scope(1);
         }
         else { // 函数定义 Specifier FunDec CompSt
             add_scope();
@@ -76,7 +76,7 @@ void semantic_ExtDef(Syntax_Tree_Node_t * node) {
             semantic_FunDec(node->first_child->next_sibling, type, 0);
             semantic_CompSt(nth_child(node, 2));
             last_ret_type = NULL;
-            delete_scope();
+            delete_scope(1);
         }
     }
 }
@@ -116,7 +116,7 @@ Type* semantic_StructSpecifier(Syntax_Tree_Node_t * node) {
         if(nth_child(node, 3)) 
             semantic_DefList(nth_child(node, 2), 0);
         Type* type = new_type_struct();
-        delete_scope();
+        delete_scope(0);
         return type;
     }
     else if(strcmp(nth_child(node, 1)->name, "OptTag") == 0) { 
@@ -127,7 +127,7 @@ Type* semantic_StructSpecifier(Syntax_Tree_Node_t * node) {
             semantic_DefList(nth_child(node, 3), 0);
         Type* type = new_type_struct();
         add_struct(type, name, node->lineno);
-        delete_scope();
+        delete_scope(0);
         return type;
     }
     else { // 创建新的结构体变量
@@ -135,7 +135,7 @@ Type* semantic_StructSpecifier(Syntax_Tree_Node_t * node) {
         Symbol* sym = find_struct_or_variable(name);
         if(!sym) {
             sem_error(17, node->lineno, "直接使用未定义过的结构体来定义变量");
-            return new_type_int();
+            return NULL;
         }
         assert(sym->type->kind == STRUCTURE);
         return sym->type;
@@ -278,7 +278,7 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
     else if(strcmp(node->first_child->name, "CompSt") == 0) { 
         add_scope();
         semantic_CompSt(node->first_child);
-        delete_scope();
+        delete_scope(1);
     }
     else if(strcmp(node->first_child->name, "RETURN") == 0) {
         Type* type = semantic_Exp(node->first_child->next_sibling);
