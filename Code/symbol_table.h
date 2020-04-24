@@ -60,6 +60,8 @@ void symbol_table_init();
 void add_scope();
 void delete_scope(int if_free);
 void print_scope(Scope* head);
+void add_func_read();
+void add_func_write();
 
 // 符号表的加入
 void add_sym_into_var_table(Symbol* sym);

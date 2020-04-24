@@ -10,6 +10,32 @@ void symbol_table_init() {
     add_scope(); // 第2层全局变量用
     memset(var_table, 0, sizeof(var_table));
     memset(global_table, 0, sizeof(global_table));
+    add_func_read();
+    add_func_write();
+}
+
+void add_func_read() {
+    // read函数没有任何参数,返回值为int型(即读入的整数值)
+    Func* func = (Func*)malloc(sizeof(Func));
+    func->ret_type = new_type_int();
+    func->lineno = 0;
+    func->def = 1;
+    func->para = NULL;
+    add_func(func, 0, "read");
+}
+
+void add_func_write() {
+    // write函数包含一个int类型的参数(即要输出的整数值),返回值也为int型(固定返回0)
+    FieldList* para = (FieldList*)malloc(sizeof(FieldList));
+    para->name = NULL;
+    para->type = new_type_int();
+    para->next = NULL;
+    Func* func = (Func*)malloc(sizeof(Func));
+    func->ret_type = new_type_int();
+    func->lineno = 0;
+    func->def = 1;
+    func->para = para;
+    add_func(func, 0, "write");
 }
 
 unsigned int hash(char* name) {
