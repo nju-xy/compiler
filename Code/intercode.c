@@ -219,3 +219,48 @@ void gen_code_write(Operand* op) {
     Log("WRITE %s", operand_name(op));
     fprintf(fp_intercode, "WRITE %s\n", operand_name(op));
 }
+
+void gen_code_label(int label) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_LABEL;
+    code->label = label;
+    add_code(code);
+    Log("LABEL label%d :", label);
+    fprintf(fp_intercode, "LABEL label%d :\n", label);
+}
+
+void gen_code_goto(int label) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_GOTO;
+    code->label = label;
+    add_code(code);
+    Log("GOTO label%d", label);
+    fprintf(fp_intercode, "GOTO label%d\n", label);
+}
+
+char* relop_name(int relop) {
+    if(relop == 0) 
+        return "<";
+    else if(relop == 1)
+        return ">";
+    else if(relop == 2)
+        return "<=";
+    else if(relop == 3)
+        return ">=";
+    else if(relop == 4)
+        return "==";
+    else if(relop == 5)
+        return "!=";
+}
+
+void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_IF_GOTO;
+    code->label = label;
+    code->if_goto.relop = relop;
+    code->if_goto.op1 = op1;
+    code->if_goto.op2 = op2;
+    add_code(code);
+    Log("IF %s %s %s GOTO label%d", operand_name(op1), relop_name(relop), operand_name(op2), label);
+    fprintf(fp_intercode, "IF %s %s %s GOTO label%d\n", operand_name(op1), relop_name(relop), operand_name(op2), label);
+}

@@ -260,26 +260,28 @@ void semantic_StmtList(Syntax_Tree_Node_t * node) {
     assert(node);
     assert(strcmp(node->name, "StmtList") == 0);
     
-    semantic_Stmt(node->first_child);
+    int label = new_label();
+    semantic_Stmt(node->first_child, label);
+    gen_code_label(label);
 
     if(nth_child(node, 1)) {
         semantic_StmtList(nth_child(node, 1));
     }
 }
 
-void semantic_Stmt(Syntax_Tree_Node_t * node) {
+void semantic_Stmt(Syntax_Tree_Node_t * node, int S_next) {
     // Stmt -> Exp SEMI
     //       | CompSt
     //       | RETURN Exp SEMI
     //       | IF LP Exp RP Stmt
     //       | IF LP Exp RP Stmt ELSE Stmt
     //       | WHILE LP EXP RP Stmt
-    // 函数里面Stmt
+    // 函数里面Stmt, 返回值为next的label标号
     assert(node);
     assert(strcmp(node->name, "Stmt") == 0);
 
     if(strcmp(node->first_child->name, "Exp") == 0) { // Exp SEMI
-        semantic_Exp(node->first_child);
+        semantic_Exp(node->first_child, 0, 0);
     }
     else if(strcmp(node->first_child->name, "CompSt") == 0) { 
         add_scope();
@@ -287,7 +289,7 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
         delete_scope(1);
     }
     else if(strcmp(node->first_child->name, "RETURN") == 0) {
-        Operand* op = semantic_Exp(node->first_child->next_sibling);
+        Operand* op = semantic_Exp(node->first_child->next_sibling, 0, 0);
         Type* type = (op) ? op->type : NULL; 
         if(!type || !last_ret_type || !same_type(type, last_ret_type)) {
             sem_error(8, node->lineno, "return语句的返回类型与函数定义的返回类型不匹配");
@@ -297,23 +299,53 @@ void semantic_Stmt(Syntax_Tree_Node_t * node) {
     else if(strcmp(node->first_child->name, "IF") == 0) {
         // IF LP Exp RP Stmt
         // IF LP Exp RP Stmt ELSE Stmt
-        Operand* op = semantic_Exp(nth_child(node, 2));
-        Type* type = (op) ? op->type : NULL; 
-        if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
-            sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
+        if(!nth_child(node, 5)) {
+            int B_true = new_label();
+            int B_false = S_next;
+            int S1_next = S_next;
+            // B.code || label(B.true) || S1_code
+            Operand* op = semantic_Exp(nth_child(node, 2), B_true, B_false);
+            Type* type = (op) ? op->type : NULL; 
+            if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
+                sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
+            }
+            gen_code_label(B_true);
+            semantic_Stmt(nth_child(node, 4), S1_next);
         }
-        semantic_Stmt(nth_child(node, 4));
-        if(nth_child(node, 5))
-            semantic_Stmt(nth_child(node, 6));
+        else {
+            int B_true = new_label();
+            int B_false = new_label();
+            int S1_next = S_next;
+            int S2_next = S_next;
+            // B.code || label(B.true) || S1.code || gen(goto S.next) || label(B.false) ||S2.code
+            Operand* op = semantic_Exp(nth_child(node, 2), B_true, B_false);
+            Type* type = (op) ? op->type : NULL; 
+            if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
+                sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
+            }
+            gen_code_label(B_true);
+            semantic_Stmt(nth_child(node, 4), S1_next);
+            gen_code_goto(S_next);
+            gen_code_label(B_false);
+            semantic_Stmt(nth_child(node, 6), S2_next);
+        }
     }
     else if(strcmp(node->first_child->name, "WHILE") == 0) {
         // WHILE LP EXP RP Stmt
-        Operand* op = semantic_Exp(nth_child(node, 2));
+        int begin = new_label();
+        int B_true = new_label();
+        int B_false = S_next;
+        int S1_next = begin;
+        // S.code = label(begin) || B.code || label(B.true) || S1.code || gen(goto begin)
+        gen_code_label(begin);
+        Operand* op = semantic_Exp(nth_child(node, 2), B_true, B_false);
         Type* type = (op) ? op->type : NULL; 
         if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
             sem_error(7, node->lineno, "操作数类型与操作符WHILE不匹配");
         }
-        semantic_Stmt(nth_child(node, 4));
+        gen_code_label(B_true);
+        semantic_Stmt(nth_child(node, 4), S_next);
+        gen_code_goto(begin);
     }
     
 }
@@ -371,7 +403,7 @@ void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
             sem_error(15, node->lineno, "结构体定义时对域进行初始化");
         }
         else { // 变量
-            Operand* op2 = semantic_Exp(nth_child(node, 2));
+            Operand* op2 = semantic_Exp(nth_child(node, 2), 0, 0);
             Type* type2 = op2->type;
             if(!type1 || !type2) {
                 sem_error(7, node->lineno, "由于之前的错误，赋值号两边的表达式类型不匹配");
@@ -401,7 +433,7 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
         //Log("参数多了");
         return 0; 
     }
-    Operand* op = semantic_Exp(node->first_child);
+    Operand* op = semantic_Exp(node->first_child, 0, 0);
     if(!same_type(op->type, para->type)) {
         //Log("参数类型不匹配");
         return 0;
@@ -422,7 +454,7 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
     return 1;
 }
 
-Operand* semantic_Exp(Syntax_Tree_Node_t * node) {
+Operand* semantic_Exp(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     // Exp -> Exp ASSIGNOP Exp
     //      | Exp AND Exp
     //      | Exp OR Exp
@@ -447,8 +479,8 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node) {
     if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "ASSIGNOP") == 0) {
         // Exp ASSIGNOP Exp
         int is_right_value = check_right_value(node->first_child);
-        Operand* op1 = semantic_Exp(node->first_child);
-        Operand* op2 = semantic_Exp(nth_child(node, 2));
+        Operand* op1 = semantic_Exp(node->first_child, B_true, B_false);
+        Operand* op2 = semantic_Exp(nth_child(node, 2), B_true, B_false);
         Type* type1 = (op1) ? op1->type : NULL; 
         Type* type2 = (op2) ? op2->type : NULL; 
         // Log("lineno:%d, type1:%d, type2:%d", node->lineno, type1->kind, type2->kind);
@@ -470,44 +502,44 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node) {
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "AND") == 0) {
         // Exp AND Exp
-        return exp_2_op_logic(node);
+        return exp_2_op_logic(node, B_true, B_false);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "OR") == 0) {
         // Exp OR Exp
-        return exp_2_op_logic(node);
+        return exp_2_op_logic(node, B_true, B_false);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "RELOP") == 0) {
         // Exp RELOP Exp
-        exp_2_op_algorithm(node);
+        exp_2_op_logic(node, B_true, B_false);
         return new_operand_int(0);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "PLUS") == 0) {
         // Exp PLUS Exp
-        return exp_2_op_algorithm(node);
+        return exp_2_op_algorithm(node, B_true, B_false);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "MINUS") == 0) {
         // Exp MINUS Exp
-        return exp_2_op_algorithm(node);
+        return exp_2_op_algorithm(node, B_true, B_false);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "STAR") == 0) {
         // Exp STAR Exp
-        return exp_2_op_algorithm(node);
+        return exp_2_op_algorithm(node, B_true, B_false);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "DIV") == 0) {
         // Exp DIV Exp
-        return exp_2_op_algorithm(node);
+        return exp_2_op_algorithm(node, B_true, B_false);
     }
     else if(strcmp(node->first_child->name, "LP") == 0) {
         // LP Exp RP
-        return semantic_Exp(node->first_child->next_sibling);
+        return semantic_Exp(node->first_child->next_sibling, B_true, B_false);
     }
     else if(strcmp(node->first_child->name, "MINUS") == 0) {
         // MINUS Exp
-        return exp_1_op_algorithm(node);
+        return exp_1_op_algorithm(node, B_true, B_false);
     }
     else if(strcmp(node->first_child->name, "NOT") == 0) {
         // NOT Exp
-        return exp_1_op_logic(node);
+        return exp_1_op_logic(node, B_true, B_false);
     }
     else if(strcmp(node->first_child->name, "ID") == 0) {
         if(!node->first_child->next_sibling) {
@@ -583,7 +615,7 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node) {
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "DOT") == 0) {
         // Exp DOT ID
         // 结构体
-        Operand* op = semantic_Exp(node->first_child);
+        Operand* op = semantic_Exp(node->first_child, B_true, B_false);
         Type* type = (op) ? op->type : NULL; 
         if(!type || type->kind != STRUCTURE) {
             sem_error(13, node->lineno, "对非结构体型变量使用'.'操作符");
@@ -602,8 +634,8 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node) {
         // Exp LB Exp RB
         // 数组
         // Log("数组");
-        Operand* operand1 = semantic_Exp(node->first_child);
-        Operand* operand2 = semantic_Exp(nth_child(node, 2));
+        Operand* operand1 = semantic_Exp(node->first_child, B_true, B_false);
+        Operand* operand2 = semantic_Exp(nth_child(node, 2), B_true, B_false);
         Type* type1 = (operand1) ? operand1->type : NULL; 
         Type* type2 = (operand2) ? operand2->type : NULL; 
         if(!type1) {
@@ -629,10 +661,10 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node) {
     }
 }
 
-Operand* exp_2_op_algorithm(Syntax_Tree_Node_t * node) {
+Operand* exp_2_op_algorithm(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     // 指那些只能int和float参加的二元算术运算
-    Operand* operand1 = semantic_Exp(node->first_child);
-    Operand* operand2 = semantic_Exp(nth_child(node, 2));
+    Operand* operand1 = semantic_Exp(node->first_child, B_true, B_false);
+    Operand* operand2 = semantic_Exp(nth_child(node, 2), B_true, B_false);
     Type* type1 = (operand1) ? operand1->type : NULL; 
     Type* type2 = (operand2) ? operand2->type : NULL; 
     // Log("二元算数运算, %d, %d", type1->kind, type2->kind);
@@ -664,10 +696,38 @@ Operand* exp_2_op_algorithm(Syntax_Tree_Node_t * node) {
     return new_operand;
 }
 
-Operand* exp_2_op_logic(Syntax_Tree_Node_t * node) {
+Operand* exp_2_op_logic(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     // 二元逻辑运算
-    Operand* operand1 = semantic_Exp(node->first_child);
-    Operand* operand2 = semantic_Exp(nth_child(node, 2));
+    Operand* operand1 = NULL, *operand2 = NULL;
+    char* name = nth_child(node, 1)->name;
+    if(strcmp(name, "OR") == 0) {
+        int B1_true = B_true;
+        int B1_false = new_label();
+        int B2_true = B_true;
+        int B2_false = B_false;
+        // B1.code || label(B1.false) || B2.code
+        operand1 = semantic_Exp(node->first_child, B_true, B_false);
+        gen_code_label(B1_false);
+        operand2 = semantic_Exp(nth_child(node, 2), B_true, B_false);
+    }
+    else if(strcmp(name, "AND") == 0){ 
+        int B1_true = new_label();
+        int B1_false = B_false;
+        int B2_true = B_true;
+        int B2_false = B_false;
+        // B1.code || label(B1.true) || B2.code
+        operand1 = semantic_Exp(node->first_child, B_true, B_false);
+        gen_code_label(B1_true);
+        operand2 = semantic_Exp(nth_child(node, 2), B_true, B_false);
+    }
+    else { // RELOP
+        operand1 = semantic_Exp(node->first_child, 0, 0);
+        operand2 = semantic_Exp(nth_child(node, 2), 0, 0);
+        int relop = nth_child(node, 1)->val.type_relop;
+        gen_code_if_goto(operand1, relop, operand2, B_true);
+        gen_code_goto(B_false);
+    }
+    
     Type* type1 = (operand1) ? operand1->type : NULL; 
     Type* type2 = (operand2) ? operand2->type : NULL; 
     // Log("二元算数运算, %d, %d", type1->kind, type2->kind);
@@ -682,9 +742,9 @@ Operand* exp_2_op_logic(Syntax_Tree_Node_t * node) {
     return new_operand;
 }
 
-Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node) {
+Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     // 指那些只能int和float参加的一元算术运算
-    Operand* operand1 = semantic_Exp(node->first_child->next_sibling);
+    Operand* operand1 = semantic_Exp(node->first_child->next_sibling, B_true, B_false);
     Type* type1 = (operand1) ? operand1->type : NULL;
     // Log("二元算数运算, %d, %d", type1->kind, type2->kind);
     if(!type1) {
@@ -694,20 +754,32 @@ Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node) {
         sem_error(7, node->lineno, "操作数类型与操作符不匹配，只允许int或float");
     }
     /* LAB3 */
-    Operand* new_operand = new_operand_temp_var(type1);
+    
     char* op_name = node->first_child->name;
     if(strcmp(op_name, "MINUS") == 0) {
-        if(type1->basic == BASIC_INT)
+        if(operand1->kind == CONSTANT_INT || operand1->kind == CONSTANT_FLOAT) {
+            operand1->int_value = - operand1->int_value;
+            return operand1;
+        }
+        else if(type1->basic == BASIC_INT) {
+            Operand* new_operand = new_operand_temp_var(type1);
             gen_code_minus(new_operand, new_operand_int(0), operand1);
-        else 
+            return new_operand;
+        }
+        else {
+            Operand* new_operand = new_operand_temp_var(type1);
             gen_code_minus(new_operand, new_operand_float(0), operand1);
+            return new_operand;
+        }
     }
-    return new_operand;
+    return NULL;
 }
 
-Operand* exp_1_op_logic(Syntax_Tree_Node_t * node) {
+Operand* exp_1_op_logic(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     // 一元逻辑运算
-    Operand* operand1 = semantic_Exp(node->first_child->next_sibling);
+    int B1_true = B_false;
+    int B1_false = B_true;
+    Operand* operand1 = semantic_Exp(node->first_child->next_sibling, B1_true, B1_false);
     Type* type1 = (operand1) ? operand1->type : NULL;
     // Log("二元算数运算, %d, %d", type1->kind, type2->kind);
     if(!type1) {
@@ -759,7 +831,7 @@ Operand* semantic_write(Syntax_Tree_Node_t * node) {
             Log("write参数太多");
         }
         Syntax_Tree_Node_t* node_exp = node_arg->first_child;
-        Operand* op1 = semantic_Exp(node_exp);
+        Operand* op1 = semantic_Exp(node_exp, 0, 0);
         gen_code_write(op1);
     }
     gen_code_assign(new_operand, new_operand_int(0));
