@@ -28,6 +28,7 @@ struct Type_
         } array;
         FieldList* field;
     };
+    int width;
 };
 
 // // 定义函数参数

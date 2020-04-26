@@ -8,6 +8,7 @@ typedef struct Symbol_ Symbol;
 struct Symbol_
 {
     char* name;
+    int var_no;
     int scope_num;
     int lineno;
     enum {
@@ -52,16 +53,16 @@ Symbol* find_struct_or_variable(char* name);
 void add_struct_into_table(Type* type, char* name, int lineno);
 
 // 变量相关
-void add_variable(Type* type, char* name, int lineno, int struct_para_var);
-void add_variable_into_table(Type* type, char* name, int lineno);
+Symbol* add_variable(Type* type, char* name, int lineno, int struct_para_var);
+Symbol* add_variable_into_table(Type* type, char* name, int lineno);
 
 // 作用域相关
 void symbol_table_init();
 void add_scope();
 void delete_scope(int if_free);
 void print_scope(Scope* head);
-void add_func_read();
-void add_func_write();
+// void add_func_read();
+// void add_func_write();
 
 // 符号表的加入
 void add_sym_into_var_table(Symbol* sym);

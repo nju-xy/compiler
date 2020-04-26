@@ -10,7 +10,11 @@
 #include "debug.h"
 #include "syntax_tree.h"
 #include "symbol_table.h"
+#include "intercode.h"
 #include "senmantic.h"
+
+#define MAX(a, b) (a > b ? a : b)
+#define MIN(a, b) (a < b ? a : b)
 
 void yyerror(const char *msg);
 void yyerror2(const char *msg);

@@ -4,6 +4,7 @@ Type* new_type_int() {
     Type* new_int = (Type*)malloc(sizeof(Type));
     new_int->kind = BASIC;
     new_int->basic = BASIC_INT;
+    new_int->width = 4;
     return new_int;
 }
 
@@ -11,6 +12,7 @@ Type* new_type_float() {
     Type* new_float = (Type*)malloc(sizeof(Type));
     new_float->kind = BASIC;
     new_float->basic = BASIC_FLOAT;
+    new_float->width = 4;
     return new_float;
 }
 
@@ -19,6 +21,7 @@ Type* new_type_array(Type* elem, int num) {
     new_arr->kind = ARRAY;
     new_arr->array.elem = elem;
     new_arr->array.size = num;
+    new_arr->width = elem->width * num;
     return new_arr;
 }
 
@@ -29,8 +32,10 @@ Type* new_type_struct() {
     Symbol* sym = scope_head->first_symbol;
     FieldList* field = NULL;
     new_struct->field = NULL;
+    new_struct->width = 0;
     while(sym) {
         FieldList* next_field = new_field(sym->type, sym->name);
+        new_struct->width += sym->type->width;
         if(!field) {
             new_struct->field = field = next_field;
         }
@@ -41,25 +46,7 @@ Type* new_type_struct() {
         sym = sym->next_in_scope;
     }
     return new_struct;
-
-    return new_struct;
 }
-
-// int cal_size(Type* elem) {
-//     if(elem->kind == BASIC) {
-//         if(elem->basic == BASIC_INT) 
-//             return sizeof(int);
-//         else 
-//             return sizeof(float);
-//     }
-//     else if(elem->kind == ARRAY) {
-//         return elem->array.size;
-//     }
-//     else { // struct
-//         TODO();
-//         return 0;
-//     }
-// }
 
 void print_type(Type* elem) {
     if(!elem) {

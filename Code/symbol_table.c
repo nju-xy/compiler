@@ -10,33 +10,33 @@ void symbol_table_init() {
     add_scope(); // 第2层全局变量用
     memset(var_table, 0, sizeof(var_table));
     memset(global_table, 0, sizeof(global_table));
-    add_func_read();
-    add_func_write();
+    // add_func_read();
+    // add_func_write();
 }
 
-void add_func_read() {
-    // read函数没有任何参数,返回值为int型(即读入的整数值)
-    Func* func = (Func*)malloc(sizeof(Func));
-    func->ret_type = new_type_int();
-    func->lineno = 0;
-    func->def = 1;
-    func->para = NULL;
-    add_func(func, 0, "read");
-}
+// void add_func_read() {
+//     // read函数没有任何参数,返回值为int型(即读入的整数值)
+//     Func* func = (Func*)malloc(sizeof(Func));
+//     func->ret_type = new_type_int();
+//     func->lineno = 0;
+//     func->def = 1;
+//     func->para = NULL;
+//     add_func(func, 0, "read");
+// }
 
-void add_func_write() {
-    // write函数包含一个int类型的参数(即要输出的整数值),返回值也为int型(固定返回0)
-    FieldList* para = (FieldList*)malloc(sizeof(FieldList));
-    para->name = NULL;
-    para->type = new_type_int();
-    para->next = NULL;
-    Func* func = (Func*)malloc(sizeof(Func));
-    func->ret_type = new_type_int();
-    func->lineno = 0;
-    func->def = 1;
-    func->para = para;
-    add_func(func, 0, "write");
-}
+// void add_func_write() {
+//     // write函数包含一个int类型的参数(即要输出的整数值),返回值也为int型(固定返回0)
+//     FieldList* para = (FieldList*)malloc(sizeof(FieldList));
+//     para->name = NULL;
+//     para->type = new_type_int();
+//     para->next = NULL;
+//     Func* func = (Func*)malloc(sizeof(Func));
+//     func->ret_type = new_type_int();
+//     func->lineno = 0;
+//     func->def = 1;
+//     func->para = para;
+//     add_func(func, 0, "write");
+// }
 
 unsigned int hash(char* name) {
     // return 0;
@@ -268,11 +268,11 @@ void add_sym_into_global_table(Symbol* sym) {
     }
 }
 
-void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
+Symbol* add_variable(Type* type, char* name, int lineno, int struct_para_var) {
     // 变量和函数重名，不管
     Symbol* old_sym = find_struct_or_variable(name);
     if(old_sym == NULL) {
-        add_variable_into_table(type, name, lineno);
+        return add_variable_into_table(type, name, lineno);
     }
     else {
         if(struct_para_var == 0) {
@@ -285,7 +285,7 @@ void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
                 sem_error(3, lineno, "变量（域名）与前面定义过的结构体名字重复");
             }
             else {
-                add_variable_into_table(type, name, lineno);
+                return add_variable_into_table(type, name, lineno);
             }
         }
         else if(struct_para_var == 1) {
@@ -296,7 +296,7 @@ void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
                 sem_error(3, lineno, "变量（函数参数）与前面定义过的结构体名字重复");
             }
             else {
-                add_variable_into_table(type, name, lineno);
+                return add_variable_into_table(type, name, lineno);
             }
         }
         else {
@@ -307,22 +307,25 @@ void add_variable(Type* type, char* name, int lineno, int struct_para_var) {
                 sem_error(3, lineno, "同一作用域内变量出现重复定义");
             }
             else {
-                add_variable_into_table(type, name, lineno);
+                return add_variable_into_table(type, name, lineno);
             }
         }
 
     }
+    return old_sym;
 }
 
-void add_variable_into_table(Type* type, char* name, int lineno) {
+Symbol* add_variable_into_table(Type* type, char* name, int lineno) {
     // Log("new variable: %s", name);
     // print_type(type);
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->name = name;
+    sym->var_no = new_var_no();
     sym->kind = symbol_VARIABLE;
     sym->type = type;
     sym->scope_num = nr_scope - 1;
     sym->lineno = lineno;
     sym->next_in_hash = sym->next_in_scope = NULL;
     add_sym_into_var_table(sym);
+    return sym;
 }
