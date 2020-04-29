@@ -220,8 +220,9 @@ lcomment    \/\*
             }
 {id}        {   // printf("ID : %s", yytext);        
                 yylval.node = create_node("ID", yylineno, 1);
-                yylval.node->val.id_name = (char *)malloc(sizeof(yytext));
+                yylval.node->val.id_name = (char *)malloc((yyleng + 1) * sizeof(char));
                 strcpy(yylval.node->val.id_name, yytext);
+                // Log("%s, %d\n", yytext, yyleng);
                 return ID;    
             }
 .           {   

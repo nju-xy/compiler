@@ -11,7 +11,7 @@
 #include "syntax_tree.h"
 #include "symbol_table.h"
 #include "intercode.h"
-#include "senmantic.h"
+#include "semantic.h"
 
 #define MAX(a, b) (a > b ? a : b)
 #define MIN(a, b) (a < b ? a : b)

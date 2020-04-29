@@ -43,7 +43,7 @@ unsigned int hash(char* name) {
     unsigned int val = 0, i;
     for(; *name; ++name) {
         val = (val << 2) + *name;
-        if(i = val & ~SIZE_OF_HASH)
+        if((i = val) & ~SIZE_OF_HASH)
             val = (val ^ (i >> 12)) & SIZE_OF_HASH;
     }
     // Log("0x%x", val);
@@ -59,7 +59,7 @@ void add_scope() {
     nr_scope++;
 }
 
-void delete_scope(int if_free) {
+void delete_scope() {
     assert(scope_head);
     Scope* cur = scope_head;
 
@@ -68,30 +68,30 @@ void delete_scope(int if_free) {
         assert(sym->kind == symbol_VARIABLE);
         assert(var_table[hash(sym->name)] == sym);
         var_table[hash(sym->name)] = sym->next_in_hash;
-        if(if_free)
-            free_sym(sym);
+        // if(if_free)
+        //     free_sym(sym);
         sym = sym->next_in_scope;
     }
     scope_head = scope_head->next;
     nr_scope--;
-    free(cur);
+    // free(cur);
 }
 
-void free_sym(Symbol* sym) {
-    if(!sym)
-        return;
-    if(sym->name) {
-        free(sym->name);
-        sym->name = NULL;
-    }
-    free(sym);
-    // if(sym->type != symbol_FUNC) {
-    //     free_type(sym->type);
-    // }
-    // else {
-    //     free_func(sym->func);
-    // }
-}
+// void free_sym(Symbol* sym) {
+//     if(!sym)
+//         return;
+//     if(sym->name) {
+//         free(sym->name);
+//         sym->name = NULL;
+//     }
+//     free(sym);
+//     // if(sym->type != symbol_FUNC) {
+//     //     free_type(sym->type);
+//     // }
+//     // else {
+//     //     free_func(sym->func);
+//     // }
+// }
 
 // void free_type(Type* type) {
 //     if(!type)
@@ -138,6 +138,7 @@ void add_func_into_table(Func* func, char* name) {
     sym->kind = symbol_FUNC;
     sym->func = func;
     sym->scope_num = 0;
+    sym->is_param = 0;
     sym->next_in_hash = sym->next_in_scope = NULL;
     sym->lineno = sym->func->lineno;
     add_sym_into_global_table(sym);
@@ -223,6 +224,7 @@ void add_struct_into_table(Type* type, char* name, int lineno) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     sym->name = name;
     sym->kind = symbol_STRUCTURE;
+    sym->is_param = 0;
     sym->type = type;
     sym->scope_num = 1;
     sym->lineno = lineno;
@@ -322,6 +324,7 @@ Symbol* add_variable_into_table(Type* type, char* name, int lineno) {
     sym->name = name;
     sym->var_no = new_var_no();
     sym->kind = symbol_VARIABLE;
+    sym->is_param = 0;
     sym->type = type;
     sym->scope_num = nr_scope - 1;
     sym->lineno = lineno;

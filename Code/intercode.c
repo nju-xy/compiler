@@ -5,7 +5,6 @@ void intercode_init() {
     label_cnt = 0;
     code_head = NULL;
     code_tail = NULL;
-    fp_intercode = fopen("../intercode/test.ir", "w+");
 }
 
 int new_temp_no() {
@@ -28,6 +27,9 @@ Operand* new_operand_int(int val) {
     new_op->kind = CONSTANT_INT;
     new_op->type = new_type_int();
     new_op->int_value = val;
+    //new_op->is_addr = 0;
+    //new_op->is_pointer = 0;
+    return new_op;
 }
 
 Operand* new_operand_float(float val) {
@@ -35,6 +37,9 @@ Operand* new_operand_float(float val) {
     new_op->kind = CONSTANT_FLOAT;
     new_op->type = new_type_float();
     new_op->float_value = val;
+    //new_op->is_addr = 0;
+    //new_op->is_pointer = 0;
+    return new_op;
 }
 
 Operand* new_operand_temp_var(Type* type) {
@@ -42,6 +47,19 @@ Operand* new_operand_temp_var(Type* type) {
     new_op->kind = VARIABLE_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
+    //new_op->is_addr = 0;
+    //new_op->is_pointer = 0;
+    return new_op;
+}
+
+Operand* new_operand_temp_addr(Type* type) {
+    Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    new_op->kind = ADDRESS_T;
+    new_op->type = type;
+    new_op->var_no = new_temp_no();
+    //new_op->is_addr = 0;
+    //new_op->is_pointer = 0;
+    return new_op;
 }
 
 Operand* new_operand_var(int var_no, Type* type) {
@@ -49,6 +67,9 @@ Operand* new_operand_var(int var_no, Type* type) {
     new_op->kind = VARIABLE_V;
     new_op->type = type;
     new_op->var_no = var_no;
+    // new_op->is_addr = 0;
+    // new_op->is_pointer = 0;
+    return new_op;
 }
 
 void add_code(InterCode* code) {
@@ -63,6 +84,7 @@ void add_code(InterCode* code) {
 }
 
 char* operand_name(Operand* op) {
+    // Log("%d, %d", op->kind, op->var_no);
     int sz = 0;
     int temp = op->var_no;
     while(temp) {
@@ -70,21 +92,21 @@ char* operand_name(Operand* op) {
         temp /= 10;
     }
     char* name = NULL;
-    if(op->kind == VARIABLE_T) {
-        name = (char*)malloc((sz + 2) * sizeof(char));
+    if(op->kind == VARIABLE_T || op->kind == ADDRESS_T) {
+        name = (char*)malloc(sizeof(char) * (sz + 3));
         sprintf(name, "t%d", op->var_no);
     }
-    else if(op->kind == VARIABLE_V){
-        name = (char*)malloc((sz + 2) * sizeof(char));
+    else if(op->kind == VARIABLE_V || op->kind == ADDRESS_V){
+        name = (char*)malloc(sizeof(char) * (sz + 3));
         sprintf(name, "v%d", op->var_no);
     }
     else if(op->kind == CONSTANT_INT) {
-        name = (char*)malloc(32);
-        sprintf(name, "#%d", op->int_value);
+        name = (char*)malloc(33);
+        snprintf(name, 32, "#%d", op->int_value);
     }
-    else if(op->kind == CONSTANT_INT) {
-        name = (char*)malloc(32);
-        sprintf(name, "#%f", op->float_value);
+    else if(op->kind == CONSTANT_FLOAT) {
+        name = (char*)malloc(65);
+        snprintf(name, 64, "#%f", op->float_value);
     }
     else {
         TODO();
@@ -162,6 +184,36 @@ void gen_code_assign(Operand* op1, Operand* op2) {
     add_code(code);
     Log("%s := %s", operand_name(op1), operand_name(op2));
     fprintf(fp_intercode, "%s := %s\n", operand_name(op1), operand_name(op2));
+}
+
+void gen_code_right_pointer(Operand* op1, Operand* op2) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_RIGHT_POINTER;
+    code->left = op1;
+    code->right = op2; 
+    add_code(code);
+    Log("%s := *%s", operand_name(op1), operand_name(op2));
+    fprintf(fp_intercode, "%s := *%s\n", operand_name(op1), operand_name(op2));
+}
+
+void gen_code_left_pointer(Operand* op1, Operand* op2) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_LEFT_POINTER;
+    code->left = op1;
+    code->right = op2; 
+    add_code(code);
+    Log("*%s := %s", operand_name(op1), operand_name(op2));
+    fprintf(fp_intercode, "*%s := %s\n", operand_name(op1), operand_name(op2));
+}
+
+void gen_code_addr(Operand* op1, Operand* op2) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_ASSIGN;
+    code->left = op1;
+    code->right = op2; 
+    add_code(code);
+    Log("%s := &%s", operand_name(op1), operand_name(op2));
+    fprintf(fp_intercode, "%s := &%s\n", operand_name(op1), operand_name(op2));
 }
 
 void gen_code_call(Operand* op, char* func_name) {
@@ -251,6 +303,7 @@ char* relop_name(int relop) {
         return "==";
     else if(relop == 5)
         return "!=";
+    return "NULL";
 }
 
 void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
@@ -264,3 +317,15 @@ void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
     Log("IF %s %s %s GOTO label%d", operand_name(op1), relop_name(relop), operand_name(op2), label);
     fprintf(fp_intercode, "IF %s %s %s GOTO label%d\n", operand_name(op1), relop_name(relop), operand_name(op2), label);
 }
+
+void gen_code_dec(int var_no, int width) {
+    InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    code->kind = INTER_DEC;
+    code->dec.var_no = var_no;
+    code->dec.width = width;
+    add_code(code);
+    Log("DEC v%d %d", var_no, width);
+    fprintf(fp_intercode, "DEC v%d %d\n", var_no, width);
+}
+
+/*******************优化部分*******************************/

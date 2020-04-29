@@ -9,6 +9,7 @@ struct Symbol_
 {
     char* name;
     int var_no;
+    int is_param;
     int scope_num;
     int lineno;
     enum {
@@ -59,7 +60,7 @@ Symbol* add_variable_into_table(Type* type, char* name, int lineno);
 // 作用域相关
 void symbol_table_init();
 void add_scope();
-void delete_scope(int if_free);
+void delete_scope();
 void print_scope(Scope* head);
 // void add_func_read();
 // void add_func_write();
@@ -69,7 +70,7 @@ void add_sym_into_var_table(Symbol* sym);
 void add_sym_into_global_table(Symbol* sym);
 
 // 删除相关
-void free_sym(Symbol* sym);
+// void free_sym(Symbol* sym);
 // void free_type(Type* type);
 // void free_func(Func* func);
 // void free_fieldlist(FieldList* field);

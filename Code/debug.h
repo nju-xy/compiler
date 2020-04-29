@@ -21,9 +21,6 @@
       } \
     } while (0)
 
-// #define panic(format, ...) \
-//   assert(0, format, ## __VA_ARGS__)
-
 #define TODO() Log("Please implement me."); \
   assert(0)
 

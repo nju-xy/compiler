@@ -10,6 +10,7 @@ struct FieldList_
 {
     char* name;
     Type* type;
+    int shift;
     FieldList* next;
 };
 
@@ -59,11 +60,11 @@ int same_type(Type* t1, Type* t2);
 Func* new_func(Type* ret_type, int lineno, int declare);
 void print_func(Func* func);
 // FieldList* new_para(Type* type, FieldList* next, char* name);
-FieldList* add_field(FieldList* field_list, Type* type, char* name, int in_para, int lineno);
+// FieldList* add_field(FieldList* field_list, Type* type, char* name, int in_para, int lineno);
 FieldList* new_field(Type* type, char* name);
 int same_func(Func* func1, Func* func2);
 int same_struct(FieldList* field1, FieldList* field2);
-Type* find_field(Type* type, char* name);
+FieldList* find_field(Type* type, char* name);
 
 void print_func_table();
 void print_struct_table();

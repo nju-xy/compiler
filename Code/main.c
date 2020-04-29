@@ -9,9 +9,11 @@ void init() {
 }
 
 int main(int argc, char ** argv) {
-    if(argc <= 1) return 1;
+    if(argc <= 2) return 1;
     FILE * f = fopen(argv[1], "r");
+    fp_intercode = fopen(argv[2], "w+");
     // FILE * f = fopen("../Test/test.cmm", "r");
+    // FILE * f = fopen("../../实验测试文件/L2/Tests_advanced/tests/A-10.0.cmm", "r");
     if(!f) {
         perror(argv[1]);
         return 1;

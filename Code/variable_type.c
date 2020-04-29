@@ -30,21 +30,31 @@ Type* new_type_struct() {
     new_struct->kind = STRUCTURE;
     // 域都存在此时的符号表的最新一层作用域内
     Symbol* sym = scope_head->first_symbol;
-    FieldList* field = NULL;
+    // FieldList* field = NULL;
     new_struct->field = NULL;
     new_struct->width = 0;
     while(sym) {
-        FieldList* next_field = new_field(sym->type, sym->name);
-        new_struct->width += sym->type->width;
-        if(!field) {
-            new_struct->field = field = next_field;
-        }
-        else {
-            field->next = next_field;
-            field = next_field;
-        }
+        // FieldList* next_field = new_field(sym->type, sym->name);
+        // next_field->shift = new_struct->width;
+        // new_struct->width += sym->type->width;
+        // if(!field) {
+        //     new_struct->field = field = next_field;
+        // }
+        // else {
+        //     field->next = next_field;
+        //     field = next_field;
+        // }
+        FieldList* field = new_field(sym->type, sym->name);
+        field->next = new_struct->field;
+        new_struct->field = field;
         sym = sym->next_in_scope;
     }
+    int shift = 0;
+    for(FieldList* field = new_struct->field; field; field = field->next) {
+        field->shift = shift;
+        shift += field->type->width;
+    }
+    new_struct->width = shift;
     return new_struct;
 }
 
@@ -100,38 +110,42 @@ int same_type(Type* t1, Type* t2) {
 
 FieldList* new_field(Type* type, char* name) {
     FieldList* para = (FieldList*)malloc(sizeof(FieldList));
+    para->shift = 0;
     para->type = type;
     para->next = NULL;
     para->name = name;
     return para;
 }
 
-FieldList* add_field(FieldList* field_list, Type* type, char* name, int in_para, int lineno) { 
-    //Log("before add_field, %d", lineno);
-    // 在field_list的最后加上参数一个(type, name)的field
-    FieldList* field = (FieldList*)malloc(sizeof(FieldList));
-    field->type = type;
-    field->next = NULL;
-    field->name = name;
+// FieldList* add_field(FieldList* field_list, Type* type, char* name, int in_para, int lineno) { 
+//     //Log("before add_field, %d", lineno);
+//     // 在field_list的结尾加上参数一个(type, name)的field
+//     FieldList* field = (FieldList*)malloc(sizeof(FieldList));
+//     field->type = type;
+//     field->next = NULL;
+//     field->name = name;
 
-    assert(field_list);
+//     assert(field_list);
 
-    FieldList* cur = field_list;
-    while(1) {
-        if(!in_para) { // 在结构体里面，重名就要报错的
-            if(cur->name && strcmp(cur->name, name) == 0) {
-                sem_error(15, lineno, "同一个结构体中域名重复定义");
-                return field_list;
-            }
-        }
-        if(!cur->next)
-            break;
-        cur = cur->next;
-    }
-    cur->next = field;
-    //Log("after add_field");
-    return field_list;
-}
+//     FieldList* cur = field_list;
+//     while(1) {
+//         if(!in_para) { // 在结构体里面，重名就要报错的
+//             if(cur->name && strcmp(cur->name, name) == 0) {
+//                 sem_error(15, lineno, "同一个结构体中域名重复定义");
+//                 return field_list;
+//             }
+//         }
+//         if(!cur->next)
+//             break;
+//         cur = cur->next;
+//     }
+    
+//     cur->next = field;
+//     // field->next = field_list;
+//     // field_list = field;
+//     // Log("after add_field");
+//     return field_list;
+// }
 
 Func* new_func(Type* ret_type, int lineno, int declare) {
     // 参数都存在此时的符号表的最新一层作用域内
@@ -146,6 +160,7 @@ Func* new_func(Type* ret_type, int lineno, int declare) {
 
     func->para = NULL;
     while(sym) {
+        sym->is_param = 1;
         FieldList* new_para = new_field(sym->type, sym->name);
         if(!func->para) {
             func->para = new_para;
@@ -232,12 +247,13 @@ void print_struct_table() {
     }
 }
 
-Type* find_field(Type* type, char* name) {
+FieldList* find_field(Type* type, char* name) {
     assert(type->kind == STRUCTURE);
     FieldList* field = type->field;
     while(field) {
+        // Log("%s %d", field->name, field->shift);
         if(strcmp(field->name, name) == 0)
-            return field->type;
+            return field;
         field = field->next;
     }
     return NULL;
