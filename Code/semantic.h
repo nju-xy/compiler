@@ -26,6 +26,7 @@ void semantic_Def(Syntax_Tree_Node_t * node, int struct_para_var);
 void semantic_DecList(Syntax_Tree_Node_t * node, Type* type, int struct_para_var);
 void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int in_struct);
 Operand* semantic_Exp(Syntax_Tree_Node_t * node, int B_true, int B_false, int get_value);
+Operand* semantic_cond(Syntax_Tree_Node_t * node, int B_true, int B_false, int get_value);
 int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para);
 Operand* semantic_read(Syntax_Tree_Node_t * node);
 Operand* semantic_write(Syntax_Tree_Node_t * node);
