@@ -11,6 +11,7 @@ void semantic_analyzer(Syntax_Tree_Node_t * root) {
     check_func_table();
     // print_func_table();
     // print_struct_table();
+    ir_optimizer();
 }
 
 void check_func_table() {

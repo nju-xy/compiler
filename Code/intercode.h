@@ -19,8 +19,9 @@ struct Operand_ {
 typedef struct InterCode_ InterCode;
 struct InterCode_
 {
-    enum { INTER_ASSIGN, INTER_ADD, INTER_SUB, INTER_MUL, INTER_DIV, INTER_PARAM, INTER_FUNCTION, INTER_CALL, INTER_ARG, INTER_RETURN, INTER_READ, INTER_WRITE, INTER_LABEL, INTER_GOTO, INTER_IF_GOTO, INTER_DEC, INTER_LEFT_POINTER, INTER_RIGHT_POINTER } kind;
+    enum { INTER_ASSIGN, INTER_ADD, INTER_SUB, INTER_MUL, INTER_DIV, INTER_PARAM, INTER_FUNCTION, INTER_CALL, INTER_ARG, INTER_RETURN, INTER_READ, INTER_WRITE, INTER_LABEL, INTER_GOTO, INTER_IF_GOTO, INTER_DEC, INTER_LEFT_POINTER, INTER_RIGHT_POINTER, INTER_ADDR } kind; // 19个
     union {
+        Operand* op;
         struct { Operand *right, *left; };
         struct { Operand *result, *op1, *op2; };
         int var_no;
@@ -28,7 +29,6 @@ struct InterCode_
         struct { char* func_name; Operand* ret; };
         struct { Operand *op1, *op2; int label; int relop;} if_goto;
         struct {int var_no, width; } dec;
-        Operand* arg;
         // ...
     };
     struct InterCode_ *prev, *next; 
@@ -39,8 +39,8 @@ struct InterCode_
 //     InterCode code;
 //     struct InterCodes_ *prev, *next; 
 // };
-InterCode* code_head;
-InterCode* code_tail;
+InterCode* ir_head;
+InterCode* ir_tail;
 int temp_cnt, inter_var_cnt, label_cnt;
 int new_var_no();
 int new_temp_no();
@@ -77,7 +77,7 @@ void gen_code_goto(int label);
 void gen_code_if_goto(Operand* operand1, int relop, Operand* operand2, int label);
 void gen_code_dec(int var_no, int width);
 
+void ir_optimizer();
 
 FILE * fp_intercode;
-
 #endif
