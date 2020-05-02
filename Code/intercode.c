@@ -401,6 +401,181 @@ void print_all_ir() {
 }
 
 /*******************优化部分*******************************/
+void add_used(Operand* op, int *temp_used, int *var_used) {
+    if(op->kind == VARIABLE_V) {
+        var_used[op->var_no] = 1;
+    }
+    else if(op->kind == VARIABLE_T) {
+        temp_used[op->var_no] = 1;
+    }
+}
+
+int unused(Operand* op, int *temp_used, int *var_used) {
+    if(op->kind == VARIABLE_V && var_used[op->var_no] == 0) {
+        return 1;
+    }
+    else if(op->kind == VARIABLE_T && temp_used[op->var_no] == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+void delete_ir(InterCode* ir) {
+    if(ir->prev) {
+        ir->prev->next = ir->next;
+    }
+    else {
+        ir_head = ir->next;
+    }
+    if(ir->next) {
+        ir->next->prev = ir->prev;
+    }
+    else {
+        ir_tail = ir->prev;
+    }
+}
+
+void delete_unused() {
+    int* temp_used = (int*)malloc((temp_cnt + 1) * sizeof(int));
+    int* var_used = (int*)malloc((inter_var_cnt + 1) * sizeof(int));
+    int* label_used = (int*)malloc((label_cnt + 1) * sizeof(int));
+    while(1) {       
+        memset(temp_used, 0, (temp_cnt + 1) * sizeof(int));
+        memset(var_used, 0, (inter_var_cnt + 1) * sizeof(int));
+        memset(label_used, 0, (label_cnt + 1) * sizeof(int));
+        InterCode* ir = ir_head;
+        while(ir) {
+            if(ir->kind == INTER_ARG || ir->kind == INTER_WRITE || ir->kind == INTER_RETURN || ir->kind == INTER_READ) {
+                add_used(ir->op, temp_used, var_used);
+            }
+            else if(ir->kind == INTER_ASSIGN || ir->kind == INTER_LEFT_POINTER || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+                add_used(ir->right, temp_used, var_used);
+            }
+            else if(ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) {
+                add_used(ir->op1, temp_used, var_used);
+                add_used(ir->op2, temp_used, var_used);
+            }
+            else if(ir->kind == INTER_PARAM) {
+                var_used[ir->var_no] = 1;
+            }
+            else if(ir->kind == INTER_GOTO) {
+                label_used[ir->label] = 1;
+            }
+            else if(ir->kind == INTER_IF_GOTO) {
+                label_used[ir->if_goto.label] = 1;
+                add_used(ir->if_goto.op1, temp_used, var_used);
+                add_used(ir->if_goto.op2, temp_used, var_used);
+            }
+            ir = ir->next;
+        }
+        int ret = 0;
+        ir = ir_head;
+        while(ir) {
+            if(ir->kind == INTER_ASSIGN || ir->kind == INTER_LEFT_POINTER || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+                if(unused(ir->left, temp_used, var_used)) {
+                    delete_ir(ir);
+                    ret = 1;
+                }
+            }
+            else if(ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) {
+                if(unused(ir->result, temp_used, var_used)) {
+                    delete_ir(ir);
+                    ret = 1;
+                }
+            }
+            else if(ir->kind == INTER_LABEL) {
+                if(label_used[ir->label] == 0) {
+                    delete_ir(ir);
+                    ret = 1;
+                }
+            }
+            else if(ir->kind == INTER_DEC) {
+                if(var_used[ir->dec.var_no] == 0) {
+                    delete_ir(ir);
+                    ret = 1;
+                }
+            }
+            ir = ir->next;
+        }
+        if(ret == 0)
+            break;
+    }
+    free(temp_used);
+    free(label_used);
+    free(var_used);
+}
+
+int same_op(Operand* op1, Operand* op2) {
+    if(op1->kind != op2->kind)
+        return 0;
+    if(op1->kind == CONSTANT_INT)
+        return (op1->int_value == op2->int_value);
+    if(op1->kind == CONSTANT_FLOAT)
+        return (op1->float_value == op2->float_value);
+    return (op1->var_no == op2->var_no);
+}
+
+void delete_assign() {
+    InterCode* ir = ir_head;
+    while(ir) {
+        if(ir->kind == INTER_ASSIGN) {
+            // 找到所有left := right的，把所有的left换成right
+            Operand* left = ir->left;
+            Operand* right = ir->right;
+            InterCode* ir2 = ir;
+            while(ir2) {
+                // 终止条件
+                if((ir->kind == INTER_READ) && same_op(left, ir2->op))
+                    break;
+                if((ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) && same_op(left, ir2->left))
+                    break;
+                if((ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) && same_op(left, ir2->result))
+                    break;
+                // 替换
+                if(ir->kind == INTER_ASSIGN || ir->kind == INTER_LEFT_POINTER || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+                    if(same_op(left, ir2->right)) {
+                        ir2->right = right;
+                    }
+                }
+                else if(ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) {
+                    if(same_op(left, ir2->op1)) {
+                        ir2->op1 = right;
+                    }
+                    if(same_op(left, ir2->op2)) {
+                        ir2->op2 = right;
+                    }
+                }
+                else if(ir->kind == INTER_ARG || ir->kind == INTER_RETURN || ir->kind == INTER_WRITE || ir->kind == INTER_READ) {
+                    if(same_op(left, ir2->op)) {
+                        ir2->right = right;
+                    }
+                }
+                else if(ir->kind == INTER_IF_GOTO) {
+                    if(same_op(left, ir2->if_goto.op1)) {
+                        ir2->if_goto.op1 = right;
+                    }
+                    if(same_op(left, ir2->if_goto.op2)) {
+                        ir2->if_goto.op2 = right;
+                    }
+                }
+                else if(ir->kind == INTER_CALL) {
+                    if(same_op(left, ir2->ret)) {
+                        ir2->ret = right;
+                    }
+                }
+                ir2 = ir2->next;
+            }
+            // delete_ir(ir);
+        }
+        ir = ir->next;
+    }
+    delete_unused();
+}
+
 void ir_optimizer() {
+    // 删除那些没有用过的变量、临时变量、label
+    // delete_unused(); // 156650 -> 136021
+    // 对于那些a := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
+    // delete_assign();
     print_all_ir();
 }

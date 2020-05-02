@@ -423,7 +423,13 @@ void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
                 temp_node = temp_node->first_child;
             }
             Symbol* sym = find_struct_or_variable(temp_node->val.id_name);
-            gen_code_assign(new_operand_var(sym->var_no, sym->type), op2);
+            Operand* op1 = new_operand_var(sym->var_no, sym->type);
+            if(op1->type->kind == BASIC) {
+                gen_code_assign(op1, op2);
+            }
+            else if(op1->type->kind == ARRAY) {
+                copy_array(op1, op2);
+            }
         }
     }
     // add_variable(field->type, field->name, node->lineno, struct_para_var);
@@ -483,6 +489,24 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
     return 1;
 }
 
+void copy_array(Operand* op1, Operand* op2) {
+    int sz = MIN(op1->type->width, op2->type->width) / 4;
+    Operand* addr1 = new_operand_temp_addr(op1->type);
+    gen_code_addr(addr1, op1);
+    Operand* addr2 = new_operand_temp_addr(op2->type);
+    gen_code_addr(addr2, op2);
+    for(int i = 0; i < sz; ++i) {
+        Operand* shift = new_operand_int(4 * i);
+        Operand* new_addr1 = new_operand_temp_addr(op1->type);
+        gen_code_plus(new_addr1, addr1, shift);
+        Operand* new_addr2 = new_operand_temp_addr(op2->type);
+        gen_code_plus(new_addr2, addr2, shift);
+        Operand* val = new_operand_temp_var(op2->type);
+        gen_code_right_pointer(val, new_addr2);
+        gen_code_left_pointer(new_addr1, val);
+    }
+}
+
 Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
     // Exp -> Exp ASSIGNOP Exp
     //      | Exp AND Exp
@@ -530,7 +554,12 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
             gen_code_left_pointer(op1, op2);
         }
         else {
-            gen_code_assign(op1, op2);
+            if(op1->type->kind == BASIC) {
+                gen_code_assign(op1, op2);
+            }
+            else if(op1->type->kind == ARRAY) {
+                copy_array(op1, op2);
+            }
         }
         if(op1->kind == ADDRESS_T || op1->kind == ADDRESS_V) {
             Operand* new_op = new_operand_temp_var(op1->type);

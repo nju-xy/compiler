@@ -32,6 +32,7 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para);
 Operand* semantic_read(Syntax_Tree_Node_t * node);
 Operand* semantic_write(Syntax_Tree_Node_t * node);
 
+void copy_array(Operand* op1, Operand* op2);
 Operand* exp_2_op_algorithm(Syntax_Tree_Node_t * node);
 Operand* exp_2_op_logic(Syntax_Tree_Node_t * node);
 Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node);
