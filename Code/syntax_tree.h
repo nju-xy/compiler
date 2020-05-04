@@ -18,7 +18,7 @@ typedef struct Syntax_Tree_Node_t
             TYPE_INT, TYPE_FLOAT
         } type_type;
         enum {
-            LT, GT, LE, GE, EQ, NE
+            LT, GT, NE, EQ, LE, GE
         } type_relop;
     } val;
 } Syntax_Tree_Node_t;

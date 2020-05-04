@@ -258,7 +258,7 @@ void gen_code_write(Operand* op) {
 
 void gen_code_label(int label) {
     if(label <= 0)
-        return;
+        assert(0);
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_LABEL;
     code->label = label;
@@ -269,7 +269,7 @@ void gen_code_label(int label) {
 
 void gen_code_goto(int label) {
     if(label <= 0)
-        return;
+        assert(0);
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_GOTO;
     code->label = label;
@@ -279,24 +279,24 @@ void gen_code_goto(int label) {
 }
 
 char* relop_name(int relop) {
-    if(relop == 0) 
+    if(relop == LT) 
         return "<";
-    else if(relop == 1)
+    else if(relop == GT)
         return ">";
-    else if(relop == 2)
+    else if(relop == LE)
         return "<=";
-    else if(relop == 3)
+    else if(relop == GE)
         return ">=";
-    else if(relop == 4)
+    else if(relop == EQ)
         return "==";
-    else if(relop == 5)
+    else if(relop == NE)
         return "!=";
     return "NULL";
 }
 
 void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
     if(label <= 0)
-        return;
+        assert(0);
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_IF_GOTO;
     code->if_goto.label = label;

@@ -302,33 +302,36 @@ void semantic_Stmt(Syntax_Tree_Node_t * node, int S_next) {
         gen_code_return(op);
     }
     else if(strcmp(node->first_child->name, "IF") == 0) {
-        // IF LP Exp RP Stmt
-        // IF LP Exp RP Stmt ELSE Stmt
         if(!nth_child(node, 5)) {
-            int B_true = new_label();
+            // IF LP Exp RP Stmt
+            // int B_true = new_label();
+            int B_true = -1;
             int B_false = S_next;
             int S1_next = S_next;
             // B.code || label(B.true) || S1_code
+            // 优化后为：B.code || S1_code
             Type* type = semantic_cond(nth_child(node, 2), B_true, B_false);
-            // Type* type = (op) ? op->type : NULL; 
             if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
                 sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
             }
-            gen_code_label(B_true);
+            // gen_code_label(B_true);
             semantic_Stmt(nth_child(node, 4), S1_next);
         }
         else {
-            int B_true = new_label();
+            // IF LP Exp RP Stmt ELSE Stmt
+            // int B_true = new_label();
+            int B_true = -1;
             int B_false = new_label();
             int S1_next = S_next;
             int S2_next = S_next;
             // B.code || label(B.true) || S1.code || gen(goto S.next) || label(B.false) ||S2.code
+            // 优化为B.code || S1.code || gen(goto S.next) || label(B.false) ||S2.code
             Type* type = semantic_cond(nth_child(node, 2), B_true, B_false);
             // Type* type = (op) ? op->type : NULL; 
             if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
                 sem_error(7, node->lineno, "操作数类型与操作符IF不匹配");
             }
-            gen_code_label(B_true);
+            // gen_code_label(B_true);
             semantic_Stmt(nth_child(node, 4), S1_next);
             gen_code_goto(S_next);
             gen_code_label(B_false);
@@ -338,17 +341,19 @@ void semantic_Stmt(Syntax_Tree_Node_t * node, int S_next) {
     else if(strcmp(node->first_child->name, "WHILE") == 0) {
         // WHILE LP EXP RP Stmt
         int begin = new_label();
-        int B_true = new_label();
+        // int B_true = new_label();
+        int B_true = -1;
         int B_false = S_next;
         int S1_next = begin;
         // S.code = label(begin) || B.code || label(B.true) || S1.code || gen(goto begin)
+        // 优化去掉B_true
         gen_code_label(begin);
         Type* type = semantic_cond(nth_child(node, 2), B_true, B_false);
         // Type* type = (op) ? op->type : NULL; 
         if(!type || type->kind != BASIC || type->basic != BASIC_INT) {
             sem_error(7, node->lineno, "操作数类型与操作符WHILE不匹配");
         }
-        gen_code_label(B_true);
+        // gen_code_label(B_true);
         semantic_Stmt(nth_child(node, 4), S1_next);
         gen_code_goto(begin);
     }
@@ -770,13 +775,18 @@ Type* semantic_cond(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "AND") == 0) {
         // Exp AND Exp
-        int label1 = new_label();
+        // int label1 = new_label();
+        int B1_true = -1;
+        int B1_false = (B_false > 0) ? B_false : new_label();
         // B1.code || label(B1.true) || B2.code
-        Type* type1 = semantic_cond(node->first_child, label1, B_false);
-        gen_code_label(label1);
+        // Type* type1 = semantic_cond(node->first_child, label1, B_false);
+        Type* type1 = semantic_cond(node->first_child, B1_true, B1_false);
+        // gen_code_label(label1);
         Type* type2 = semantic_cond(nth_child(node, 2), B_true, B_false);
-        // Type* type1 = (op1) ? op1->type : NULL; 
-        // Type* type2 = (op2) ? op2->type : NULL; 
+        if(B_false <= 0) {
+            gen_code_label(B1_false);
+        }
+
         if(!type1 || !type2) {
             sem_error(7, node->lineno, "由于之前的错误，操作数类型与操作符不匹配2");
         }
@@ -787,11 +797,16 @@ Type* semantic_cond(Syntax_Tree_Node_t * node, int B_true, int B_false) {
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "OR") == 0) {
         // Exp OR Exp
-        int label1 = new_label();
+        // int label1 = new_label();
+        int B1_true = (B_true > 0) ? B_true : new_label();
+        int B1_false = -1;
         // B1.code || label(B1.true) || B2.code
-        Type* type1 = semantic_cond(node->first_child, B_true, label1);
-        gen_code_label(label1);
+        // Type* type1 = semantic_cond(node->first_child, B_true, label1);
+        Type* type1 = semantic_cond(node->first_child, B1_true, B1_false);
+        // gen_code_label(label1);
         Type* type2 = semantic_cond(nth_child(node, 2), B_true, B_false);
+        if(B_true <= 0)
+            gen_code_label(B1_true);
         // Type* type1 = (op1) ? op1->type : NULL; 
         // Type* type2 = (op2) ? op2->type : NULL; 
         if(!type1 || !type2) {
@@ -817,14 +832,33 @@ Type* semantic_cond(Syntax_Tree_Node_t * node, int B_true, int B_false) {
             return new_type_int();
         }
         int relop = nth_child(node, 1)->val.type_relop;
-        gen_code_if_goto(op1, relop, op2, B_true);
-        gen_code_goto(B_false);
+        if(B_true > 0 && B_false >0) {
+            gen_code_if_goto(op1, relop, op2, B_true);
+            gen_code_goto(B_false);
+        }
+        else if(B_true > 0) {
+            gen_code_if_goto(op1, relop, op2, B_true);
+        }
+        else if(B_false > 0){
+            gen_code_if_goto(op1, 5 - relop, op2, B_false);
+        }
+        else {
+            assert(0);
+        }
         return new_type_int();
     }
     else {
         Operand* op = semantic_Exp(node, 1);
-        gen_code_if_goto(op, 5, new_operand_int(0), B_true);
-        gen_code_goto(B_false);
+        if(B_true > 0 && B_false > 0) {
+            gen_code_if_goto(op, NE, new_operand_int(0), B_true);
+            gen_code_goto(B_false);
+        }
+        else if(B_true > 0) {
+            gen_code_if_goto(op, NE, new_operand_int(0), B_true);
+        }
+        else if(B_false > 0) {
+            gen_code_if_goto(op, EQ, new_operand_int(0), B_false);
+        }
         return op->type;
     }
 }
