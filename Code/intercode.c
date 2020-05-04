@@ -27,6 +27,7 @@ Operand* new_operand_int(int val) {
     new_op->kind = CONSTANT_INT;
     new_op->type = new_type_int();
     new_op->int_value = val;
+    // new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -35,6 +36,7 @@ Operand* new_operand_float(float val) {
     new_op->kind = CONSTANT_FLOAT;
     new_op->type = new_type_float();
     new_op->float_value = val;
+    // new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -43,6 +45,7 @@ Operand* new_operand_temp_var(Type* type) {
     new_op->kind = VARIABLE_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
+    // new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -51,6 +54,7 @@ Operand* new_operand_temp_addr(Type* type) {
     new_op->kind = ADDRESS_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
+    // new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -59,6 +63,7 @@ Operand* new_operand_var(int var_no, Type* type) {
     new_op->kind = VARIABLE_V;
     new_op->type = type;
     new_op->var_no = var_no;
+    // new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -83,11 +88,11 @@ char* operand_name(Operand* op) {
     char* name = NULL;
     if(op->kind == VARIABLE_T || op->kind == ADDRESS_T) {
         name = (char*)malloc(sizeof(char) * (sz + 3));
-        sprintf(name, "t%d", op->var_no);
+        sprintf(name, "T%d", op->var_no);
     }
     else if(op->kind == VARIABLE_V || op->kind == ADDRESS_V){
         name = (char*)malloc(sizeof(char) * (sz + 3));
-        sprintf(name, "v%d", op->var_no);
+        sprintf(name, "V%d", op->var_no);
     }
     else if(op->kind == CONSTANT_INT) {
         name = (char*)malloc(33);
@@ -252,6 +257,8 @@ void gen_code_write(Operand* op) {
 }
 
 void gen_code_label(int label) {
+    if(label <= 0)
+        return;
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_LABEL;
     code->label = label;
@@ -261,6 +268,8 @@ void gen_code_label(int label) {
 }
 
 void gen_code_goto(int label) {
+    if(label <= 0)
+        return;
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_GOTO;
     code->label = label;
@@ -286,6 +295,8 @@ char* relop_name(int relop) {
 }
 
 void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
+    if(label <= 0)
+        return;
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_IF_GOTO;
     code->if_goto.label = label;
@@ -332,7 +343,7 @@ void print_ir(InterCode* code) {
         break;
     case INTER_PARAM: //5
         /* code */
-        fprintf(fp_intercode, "PARAM v%d\n", code->var_no);
+        fprintf(fp_intercode, "PARAM V%d\n", code->var_no);
         break;
     case INTER_FUNCTION: //6
         /* code */
@@ -372,7 +383,7 @@ void print_ir(InterCode* code) {
         break;
     case INTER_DEC: //15
         /* code */
-        fprintf(fp_intercode, "DEC v%d %d\n", code->dec.var_no, code->dec.width);
+        fprintf(fp_intercode, "DEC V%d %d\n", code->dec.var_no, code->dec.width);
         break;
     case INTER_LEFT_POINTER: //16
         /* code */
@@ -519,9 +530,13 @@ void delete_assign() {
     InterCode* ir = ir_head;
     while(ir) {
         if(ir->kind == INTER_ASSIGN) {
-            // 找到所有left := right的，把所有的left换成right
+            // 找到所有left := right的，把所有的left换成right(注意left必须是临时变量)
             Operand* left = ir->left;
             Operand* right = ir->right;
+            if(left->kind != VARIABLE_T && left->kind != ADDRESS_T) {
+                ir = ir->next;
+                continue;
+            }
             InterCode* ir2 = ir;
             while(ir2) {
                 // 终止条件
@@ -547,7 +562,7 @@ void delete_assign() {
                 }
                 else if(ir->kind == INTER_ARG || ir->kind == INTER_RETURN || ir->kind == INTER_WRITE || ir->kind == INTER_READ) {
                     if(same_op(left, ir2->op)) {
-                        ir2->right = right;
+                        ir2->op = right;
                     }
                 }
                 else if(ir->kind == INTER_IF_GOTO) {
@@ -574,8 +589,8 @@ void delete_assign() {
 
 void ir_optimizer() {
     // 删除那些没有用过的变量、临时变量、label
-    // delete_unused(); // 156650 -> 136021
-    // 对于那些a := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
+    delete_unused(); // 77260448 -> 69511790
+    // 对于那些ti := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
     // delete_assign();
     print_all_ir();
 }

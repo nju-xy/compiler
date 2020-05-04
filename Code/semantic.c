@@ -447,46 +447,33 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
     Operand* op = semantic_Exp(node->first_child, 0);
     Type* op_type = op ? op->type : NULL;
     if(!op_type || !same_type(op_type, para->type)) {
-        // Log("参数类型不匹配");
-        // Log("实参：");
-        // print_type(op_type);
-        // Log("形参：");
-        // print_type(para->type);
         return 0;
     }
+    int ret = 1;
     if(nth_child(node, 1)) { // Exp COMMA Args
         // 后面的匹配了就是匹配了
-        int ret = semantic_Args(nth_child(node, 2), para->next);
-        if(op->kind != ADDRESS_T && op->kind != ADDRESS_V && op->type->kind != BASIC) {
-            Operand* op_addr = new_operand_temp_addr(op_type);
-            gen_code_addr(op_addr, op);
-            gen_code_arg(op_addr);
-        }
-        else {
-            gen_code_arg(op);
-        }
-        return ret;
+        ret = semantic_Args(nth_child(node, 2), para->next);
     }
     else { // Exp
         if(para->next) {
             //Log("参数少了");
             return 0;
         }
-        if(op->kind != ADDRESS_T && op->kind != ADDRESS_V && op->type->kind != BASIC) {
-            Operand* op_addr = new_operand_temp_addr(op_type);
-            gen_code_addr(op_addr, op);
-            gen_code_arg(op_addr);
-        }
-        else if((op->kind == ADDRESS_T || op->kind == ADDRESS_V) && op->type->kind == BASIC) {
-            Operand* op_val = new_operand_temp_addr(op_type);
-            gen_code_right_pointer(op_val, op);
-            gen_code_arg(op_val);
-        }
-        else {
-            gen_code_arg(op);
-        }
     }
-    return 1;
+    if(op->kind != ADDRESS_T && op->kind != ADDRESS_V && op->type->kind != BASIC) {
+        Operand* op_addr = new_operand_temp_addr(op_type);
+        gen_code_addr(op_addr, op);
+        gen_code_arg(op_addr);
+    }
+    else if((op->kind == ADDRESS_T || op->kind == ADDRESS_V) && op->type->kind == BASIC) {
+        Operand* op_val = new_operand_temp_addr(op_type);
+        gen_code_right_pointer(op_val, op);
+        gen_code_arg(op_val);
+    }
+    else {
+        gen_code_arg(op);
+    }
+    return ret;
 }
 
 void copy_array(Operand* op1, Operand* op2) {
