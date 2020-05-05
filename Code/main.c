@@ -13,7 +13,7 @@ int main(int argc, char ** argv) {
     FILE * f = fopen(argv[1], "r");
     fp_intercode = fopen(argv[2], "w");
     // fp_intercode = fopen("../intercode/test.ir", "w");
-    // FILE * f = fopen("../Test/test.cmm", "r");
+    // FILE * f = fopen("../Test/test.c", "r");
     // FILE * f = fopen("../../实验测试文件/L2/Tests_advanced/tests/A-10.0.cmm", "r");
     if(!f) {
         perror(argv[1]);

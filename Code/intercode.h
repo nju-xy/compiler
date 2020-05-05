@@ -6,13 +6,13 @@ typedef struct Operand_ Operand;
 struct Operand_ {
     enum { VARIABLE_V, VARIABLE_T, CONSTANT, ADDRESS_V, ADDRESS_T } kind; // 操作符本身的类型
     Type* type;
-    // enum { NOTHING, PRE_AND, PRE_STAR } pre;
-    // 操作符前面要不要加&或者*
     union {
         int var_no;
         int int_value;
         // float float_value;
     };
+    // 操作符前面要不要加&或者*
+    enum { NOTHING, PRE_AND, PRE_STAR } pre;
 };
 
 typedef struct InterCode_ InterCode;

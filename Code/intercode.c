@@ -27,7 +27,16 @@ Operand* new_operand_int(int val) {
     new_op->kind = CONSTANT;
     new_op->type = new_type_int();
     new_op->int_value = val;
-    // new_op->pre = NOTHING;
+    new_op->pre = NOTHING;
+    return new_op;
+}
+
+Operand* copy_operand(Operand* op) {
+    Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    new_op->kind = op->kind;
+    new_op->type = op->type;
+    new_op->int_value = op->int_value;
+    new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -45,7 +54,7 @@ Operand* new_operand_temp_var(Type* type) {
     new_op->kind = VARIABLE_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
-    // new_op->pre = NOTHING;
+    new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -54,7 +63,7 @@ Operand* new_operand_temp_addr(Type* type) {
     new_op->kind = ADDRESS_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
-    // new_op->pre = NOTHING;
+    new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -63,7 +72,7 @@ Operand* new_operand_var(int var_no, Type* type) {
     new_op->kind = VARIABLE_V;
     new_op->type = type;
     new_op->var_no = var_no;
-    // new_op->pre = NOTHING;
+    new_op->pre = NOTHING;
     return new_op;
 }
 
@@ -87,15 +96,26 @@ char* operand_name(Operand* op) {
     }
     char* name = NULL;
     if(op->kind == VARIABLE_T || op->kind == ADDRESS_T) {
-        name = (char*)malloc(sizeof(char) * (sz + 3));
-        sprintf(name, "T%d", op->var_no);
+        name = (char*)malloc(sizeof(char) * (sz + 4));
+        if(op->pre == NOTHING)
+            sprintf(name, "T%d", op->var_no);
+        else if(op->pre == PRE_STAR)
+            sprintf(name, "*T%d", op->var_no);
+        else if(op->pre == PRE_AND)
+            sprintf(name, "&T%d", op->var_no);
     }
     else if(op->kind == VARIABLE_V || op->kind == ADDRESS_V){
-        name = (char*)malloc(sizeof(char) * (sz + 3));
-        sprintf(name, "V%d", op->var_no);
+         name = (char*)malloc(sizeof(char) * (sz + 4));
+        if(op->pre == NOTHING)
+            sprintf(name, "V%d", op->var_no);
+        else if(op->pre == PRE_STAR)
+            sprintf(name, "*V%d", op->var_no);
+        else if(op->pre == PRE_AND)
+            sprintf(name, "&V%d", op->var_no);
     }
     else if(op->kind == CONSTANT) {
         name = (char*)malloc(33);
+        assert(op->pre == NOTHING);
         snprintf(name, 32, "#%d", op->int_value);
     }
     // else if(op->kind == CONSTANT_FLOAT) {
@@ -570,10 +590,58 @@ void delete_const_op() {
 void delete_assign() {
     InterCode* ir = ir_head;
     while(ir) {
-        if(ir->kind == INTER_ASSIGN) {
-            // 找到所有left := right的，把所有的left换成right(注意left必须是临时变量)
+        if(ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
             Operand* left = ir->left;
             Operand* right = ir->right;
+            if(ir->kind == INTER_ASSIGN) {
+                // 找到所有left := right的，把所有的left换成right(注意left必须是临时变量)
+            }
+            else if(ir->kind == INTER_RIGHT_POINTER) {
+                // 找到所有left := *right的，把所有的left换成*right(注意left必须是临时变量)
+                right = copy_operand(right);
+                if(right->kind == ADDRESS_T) {
+                    right->kind = VARIABLE_T;
+                }
+                else if(right->kind == ADDRESS_V) {
+                    right->kind = VARIABLE_V;
+                }
+                else {
+                    Log("%d", right->kind);
+                    assert(0);
+                }
+                if(right->pre == NOTHING) {
+                    right->pre = PRE_STAR;
+                }
+                else if(right->pre == PRE_STAR) {
+                    assert(0);
+                }
+                else if(right->pre == PRE_AND) {
+                    right->pre = NOTHING;
+                }
+            }
+            else if(ir->kind == INTER_ADDR) {
+                // 找到所有left := &right的，把所有的left换成*right(注意left必须是临时变量)
+                right = copy_operand(right);
+                if(right->kind == VARIABLE_T) {
+                    right->kind = ADDRESS_T;
+                }
+                else if(right->kind == VARIABLE_V) {
+                    right->kind = ADDRESS_V;
+                }
+                else {
+                    Log("%d", right->kind);
+                    assert(0);
+                }
+                if(right->pre == NOTHING) {
+                    right->pre = PRE_AND;
+                }
+                else if(right->pre == PRE_STAR) {
+                    right->pre = NOTHING;
+                }
+                else if(right->pre == PRE_AND) {
+                    assert(0);
+                }
+            }
             if(left->kind != VARIABLE_T && left->kind != ADDRESS_T) {
                 ir = ir->next;
                 continue;
@@ -638,6 +706,6 @@ void ir_optimizer() {
     // 去除常数运算
     delete_const_op(); 
     // 对于那些ti := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
-    delete_assign();
+    delete_assign(); // 65458548
     print_all_ir();
 }
