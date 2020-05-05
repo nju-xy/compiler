@@ -432,9 +432,9 @@ void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
             if(op1->type->kind == BASIC) {
                 gen_code_assign(op1, op2);
             }
-            else if(op1->type->kind == ARRAY) {
-                copy_array(op1, op2);
-            }
+            // else if(op1->type->kind == ARRAY) {
+            //     copy_array(op1, op2);
+            // }
         }
     }
     // add_variable(field->type, field->name, node->lineno, struct_para_var);
@@ -482,11 +482,18 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
 }
 
 void copy_array(Operand* op1, Operand* op2) {
+    // Log("%s := %s", operand_name(op1), operand_name(op2));
     int sz = MIN(op1->type->width, op2->type->width) / 4;
-    Operand* addr1 = new_operand_temp_addr(op1->type);
-    gen_code_addr(addr1, op1);
-    Operand* addr2 = new_operand_temp_addr(op2->type);
-    gen_code_addr(addr2, op2);
+    Operand* addr1 = op1;
+    Operand* addr2 = op2;
+    if(op1->kind != ADDRESS_T && op1->kind != ADDRESS_V) {
+        addr1 = new_operand_temp_addr(op1->type);
+        gen_code_addr(addr1, op1);
+    }
+    if(op2->kind != ADDRESS_T && op2->kind != ADDRESS_V) {
+        addr2 = new_operand_temp_addr(op2->type);
+        gen_code_addr(addr2, op2);
+    }
     for(int i = 0; i < sz; ++i) {
         Operand* shift = new_operand_int(4 * i);
         Operand* new_addr1 = new_operand_temp_addr(op1->type);
@@ -525,7 +532,11 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
         // Exp ASSIGNOP Exp
         int is_right_value = check_right_value(node->first_child);
         Operand* op1 = semantic_Exp(node->first_child, 0);
-        Operand* op2 = semantic_Exp(nth_child(node, 2), 1);
+        Operand* op2 = NULL;
+        if(op1->type->kind == BASIC)
+            op2 = semantic_Exp(nth_child(node, 2), 1);
+        else 
+            op2 = semantic_Exp(nth_child(node, 2), 0);
         Type* type1 = (op1) ? op1->type : NULL; 
         Type* type2 = (op2) ? op2->type : NULL; 
         // Log("lineno:%d, type1:%d, type2:%d", node->lineno, type1->kind, type2->kind);
@@ -542,12 +553,13 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
             return NULL;
         }
         /* LAB3 */
-        if(op1->kind == ADDRESS_T || op1->kind == ADDRESS_V) {
-            gen_code_left_pointer(op1, op2);
-        }
         else {
             if(op1->type->kind == BASIC) {
-                gen_code_assign(op1, op2);
+                if(op1->kind == ADDRESS_T || op1->kind == ADDRESS_V) {
+                    gen_code_left_pointer(op1, op2);
+                }
+                else
+                    gen_code_assign(op1, op2);
             }
             else if(op1->type->kind == ARRAY) {
                 copy_array(op1, op2);
@@ -694,14 +706,20 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
             base_addr = new_operand_temp_addr(type);
             gen_code_addr(base_addr, op);
         }
-        Operand* addr_op = new_operand_temp_addr(type2);
+        Operand* addr_op = NULL;
         
         // Log("域类型：");
         // print_type(type2);
-        
-        Operand* shift_op = new_operand_int(shift);
-        // 最终地址 addr_op = base_op + shift_op
-        gen_code_plus(addr_op, base_addr, shift_op);
+        if(shift != 0) {
+            addr_op = new_operand_temp_addr(type2);
+            Operand* shift_op = new_operand_int(shift);
+            // 最终地址 addr_op = base_op + shift_op
+            gen_code_plus(addr_op, base_addr, shift_op);
+        }
+        else {
+            addr_op = base_addr;
+            addr_op->type = type2;
+        }
         if(get_value) {
             Operand* val_op = new_operand_temp_addr(type2);
             gen_code_right_pointer(val_op, addr_op);
@@ -742,11 +760,18 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
             gen_code_addr(base_addr, operand1);
         }
         Type* type3 = type1->array.elem;
-        Operand* shift_op = new_operand_temp_addr(new_type_int());
-        gen_code_star(shift_op, operand2, new_operand_int(type3->width));
-        // 最终地址 addr_op = base_op + shift_op
-        Operand* addr_op = new_operand_temp_addr(type3);
-        gen_code_plus(addr_op, base_addr, shift_op);
+        Operand* addr_op = NULL;
+        if(operand2->kind == CONSTANT && operand2->int_value == 0) {
+            addr_op = base_addr;
+            addr_op->type = type3;
+        }
+        else {
+            Operand* shift_op = new_operand_temp_addr(new_type_int());
+            gen_code_star(shift_op, operand2, new_operand_int(type3->width));
+            // 最终地址 addr_op = base_op + shift_op
+            addr_op = new_operand_temp_addr(type3);
+            gen_code_plus(addr_op, base_addr, shift_op);
+        }
         if(get_value) {
             Operand* val_op = new_operand_temp_addr(type3);
             gen_code_right_pointer(val_op, addr_op);

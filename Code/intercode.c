@@ -98,20 +98,20 @@ char* operand_name(Operand* op) {
     if(op->kind == VARIABLE_T || op->kind == ADDRESS_T) {
         name = (char*)malloc(sizeof(char) * (sz + 4));
         if(op->pre == NOTHING)
-            sprintf(name, "T%d", op->var_no);
+            sprintf(name, "t%d", op->var_no);
         else if(op->pre == PRE_STAR)
-            sprintf(name, "*T%d", op->var_no);
+            sprintf(name, "*t%d", op->var_no);
         else if(op->pre == PRE_AND)
-            sprintf(name, "&T%d", op->var_no);
+            sprintf(name, "&t%d", op->var_no);
     }
     else if(op->kind == VARIABLE_V || op->kind == ADDRESS_V){
          name = (char*)malloc(sizeof(char) * (sz + 4));
         if(op->pre == NOTHING)
-            sprintf(name, "V%d", op->var_no);
+            sprintf(name, "v%d", op->var_no);
         else if(op->pre == PRE_STAR)
-            sprintf(name, "*V%d", op->var_no);
+            sprintf(name, "*v%d", op->var_no);
         else if(op->pre == PRE_AND)
-            sprintf(name, "&V%d", op->var_no);
+            sprintf(name, "&v%d", op->var_no);
     }
     else if(op->kind == CONSTANT) {
         name = (char*)malloc(33);
@@ -202,29 +202,67 @@ void gen_code_assign(Operand* op1, Operand* op2) {
 
 void gen_code_right_pointer(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
-    code->kind = INTER_RIGHT_POINTER;
+    code->kind = INTER_ASSIGN;
     code->left = op1;
-    code->right = op2; 
+    code->right = copy_operand(op2);
+    if(code->right->pre == NOTHING) {
+        code->right->pre = PRE_STAR;
+    }
+    else if(code->right->pre == PRE_AND) {
+        code->right->pre = NOTHING;
+    }
+    else {
+        assert(0);
+    }
+    if(code->right->kind == ADDRESS_T) {
+        code->right->kind = VARIABLE_T;
+    }
+    else if(code->right->kind == ADDRESS_V) {
+        code->right->kind = VARIABLE_V;
+    }
+    else {
+        assert(0);
+    }
     add_code(code);
-    //Log("%s := *%s", operand_name(op1), operand_name(op2));
+    // Log("%s := *%s", operand_name(op1), operand_name(op2));
     // fprintf(fp_intercode, "%s := *%s\n", operand_name(code->left), operand_name(code->right));
 }
 
 void gen_code_left_pointer(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
     code->kind = INTER_LEFT_POINTER;
+    assert(op1->kind == ADDRESS_T || op1->kind == ADDRESS_V);
+    assert(op1->pre == NOTHING);
     code->left = op1;
     code->right = op2; 
     add_code(code);
-    //Log("*%s := %s", operand_name(op1), operand_name(op2));
+    // Log("*%s := %s", operand_name(op1), operand_name(op2));
     // fprintf(fp_intercode, "*%s := %s\n", operand_name(code->left), operand_name(code->right));
 }
 
 void gen_code_addr(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
-    code->kind = INTER_ADDR;
+    code->kind = INTER_ASSIGN;
     code->left = op1;
-    code->right = op2; 
+    code->right = copy_operand(op2); 
+    if(code->right->pre == NOTHING) {
+        code->right->pre = PRE_AND;
+    }
+    else if(code->right->pre == PRE_STAR) {
+        code->right->pre = NOTHING;
+    }
+    else {
+        assert(0);
+    }
+    if(code->right->kind == VARIABLE_T) {
+        code->right->kind = ADDRESS_T;
+    }
+    else if(code->right->kind == VARIABLE_V) {
+        code->right->kind = ADDRESS_V;
+    }
+    else {
+        assert(0);
+    }
     add_code(code);
     //Log("%s := &%s", operand_name(op1), operand_name(op2));
     // fprintf(fp_intercode, "%s := &%s\n", operand_name(code->left), operand_name(code->right));
@@ -363,7 +401,7 @@ void print_ir(InterCode* code) {
         break;
     case INTER_PARAM: //5
         /* code */
-        fprintf(fp_intercode, "PARAM V%d\n", code->var_no);
+        fprintf(fp_intercode, "PARAM v%d\n", code->var_no);
         break;
     case INTER_FUNCTION: //6
         /* code */
@@ -403,19 +441,11 @@ void print_ir(InterCode* code) {
         break;
     case INTER_DEC: //15
         /* code */
-        fprintf(fp_intercode, "DEC V%d %d\n", code->dec.var_no, code->dec.width);
+        fprintf(fp_intercode, "DEC v%d %d\n", code->dec.var_no, code->dec.width);
         break;
     case INTER_LEFT_POINTER: //16
         /* code */
         fprintf(fp_intercode, "*%s := %s\n", operand_name(code->left), operand_name(code->right));
-        break;
-    case INTER_RIGHT_POINTER: //17
-        /* code */
-        fprintf(fp_intercode, "%s := *%s\n", operand_name(code->left), operand_name(code->right));
-        break;
-    case INTER_ADDR: //18
-        /* code */
-        fprintf(fp_intercode, "%s := &%s\n", operand_name(code->left), operand_name(code->right));
         break;
     default:
         assert(0);
@@ -484,7 +514,7 @@ void delete_unused() {
                 add_used(ir->right, temp_used, var_used);
                 add_used(ir->left, temp_used, var_used);
             }
-            else if(ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+            else if(ir->kind == INTER_ASSIGN) {
                 add_used(ir->right, temp_used, var_used);
             }
             else if(ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) {
@@ -507,7 +537,7 @@ void delete_unused() {
         int ret = 0;
         ir = ir_head;
         while(ir) {
-            if(ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+            if(ir->kind == INTER_ASSIGN) {
                 if(unused(ir->left, temp_used, var_used)) {
                     delete_ir(ir);
                     ret = 1;
@@ -587,112 +617,85 @@ void delete_const_op() {
     }
 }
 
+void replace_v(InterCode* ir) {
+    // 对于v_i := t_i的，用前面t_i的表达式替换t_i
+    // Operand* left = ir->left;
+    Operand* right = ir->right;
+    InterCode* ir2 = ir->prev;
+    if(ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) {
+        if(same_op(right, ir2->result)) {
+            ir->kind = ir2->kind;
+            ir->result = ir->left;
+            ir->op1 = ir2->op1;
+            ir->op2 = ir2->op2;
+        }
+    }
+}
+
+void replace_t(InterCode* ir) {
+    // 对于t_i := xxx的，把后面的t_i换成xxx
+    Operand* left = ir->left;
+    Operand* right = ir->right;
+    InterCode* ir2 = ir->next;
+    while(ir2) {
+        // 终止条件
+        if((ir2->kind == INTER_READ) && same_op(left, ir2->op))
+            break;
+        if((ir2->kind == INTER_ASSIGN) && same_op(left, ir2->left))
+            break;
+        if((ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) && same_op(left, ir2->result))
+            break;
+        if(ir2->kind == INTER_GOTO || ir2->kind == INTER_IF_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN)
+            break;
+
+        // 替换
+        if(ir2->kind == INTER_ASSIGN || ir2->kind == INTER_LEFT_POINTER ) {
+            if(same_op(left, ir2->right)) {
+                ir2->right = right;
+            }
+        }
+        else if(ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) {
+            if(same_op(left, ir2->op1)) {
+                ir2->op1 = right;
+            }
+            if(same_op(left, ir2->op2)) {
+                ir2->op2 = right;
+            }
+        }
+        else if(ir2->kind == INTER_ARG || ir2->kind == INTER_RETURN || ir2->kind == INTER_WRITE || ir2->kind == INTER_READ) {
+            if(same_op(left, ir2->op)) {
+                ir2->op = right;
+            }
+        }
+        else if(ir2->kind == INTER_IF_GOTO) {
+            if(same_op(left, ir2->if_goto.op1)) {
+                ir2->if_goto.op1 = right;
+            }
+            if(same_op(left, ir2->if_goto.op2)) {
+                ir2->if_goto.op2 = right;
+            }
+        }
+        else if(ir2->kind == INTER_CALL) {
+            if(same_op(left, ir2->ret)) {
+                ir2->ret = right;
+            }
+        }
+        ir2 = ir2->next;
+    }
+}
+
 void delete_assign() {
     InterCode* ir = ir_head;
     while(ir) {
-        if(ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
-            Operand* left = ir->left;
-            Operand* right = ir->right;
-            if(ir->kind == INTER_ASSIGN) {
-                // 找到所有left := right的，把所有的left换成right(注意left必须是临时变量)
+        if(ir->kind == INTER_ASSIGN) {
+            if(ir->left->kind == VARIABLE_T || ir->left->kind == ADDRESS_T) {
+                // 找到所有t_i := xxx的，把所有的t_i换成xxx
+                replace_t(ir);
             }
-            else if(ir->kind == INTER_RIGHT_POINTER) {
-                // 找到所有left := *right的，把所有的left换成*right(注意left必须是临时变量)
-                right = copy_operand(right);
-                if(right->kind == ADDRESS_T) {
-                    right->kind = VARIABLE_T;
-                }
-                else if(right->kind == ADDRESS_V) {
-                    right->kind = VARIABLE_V;
-                }
-                else {
-                    Log("%d", right->kind);
-                    assert(0);
-                }
-                if(right->pre == NOTHING) {
-                    right->pre = PRE_STAR;
-                }
-                else if(right->pre == PRE_STAR) {
-                    assert(0);
-                }
-                else if(right->pre == PRE_AND) {
-                    right->pre = NOTHING;
-                }
-            }
-            else if(ir->kind == INTER_ADDR) {
-                // 找到所有left := &right的，把所有的left换成*right(注意left必须是临时变量)
-                right = copy_operand(right);
-                if(right->kind == VARIABLE_T) {
-                    right->kind = ADDRESS_T;
-                }
-                else if(right->kind == VARIABLE_V) {
-                    right->kind = ADDRESS_V;
-                }
-                else {
-                    Log("%d", right->kind);
-                    assert(0);
-                }
-                if(right->pre == NOTHING) {
-                    right->pre = PRE_AND;
-                }
-                else if(right->pre == PRE_STAR) {
-                    right->pre = NOTHING;
-                }
-                else if(right->pre == PRE_AND) {
-                    assert(0);
-                }
-            }
-            if(left->kind != VARIABLE_T && left->kind != ADDRESS_T) {
-                ir = ir->next;
-                continue;
-            }
-            // Log("%s", operand_name(left));
-            InterCode* ir2 = ir->next;
-            while(ir2) {
-                // 终止条件
-                if((ir2->kind == INTER_READ) && same_op(left, ir2->op))
-                    break;
-                if((ir2->kind == INTER_ASSIGN || ir2->kind == INTER_RIGHT_POINTER || ir2->kind == INTER_ADDR) && same_op(left, ir2->left))
-                    break;
-                if((ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) && same_op(left, ir2->result))
-                    break;
-                if(ir2->kind == INTER_GOTO || ir2->kind == INTER_IF_GOTO || ir2->kind == INTER_LABEL)
-                    break;
-                // 替换
-                if(ir2->kind == INTER_ASSIGN || ir2->kind == INTER_LEFT_POINTER || ir2->kind == INTER_RIGHT_POINTER || ir2->kind == INTER_ADDR) {
-                    if(same_op(left, ir2->right)) {
-                        ir2->right = right;
-                    }
-                }
-                else if(ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) {
-                    if(same_op(left, ir2->op1)) {
-                        // Log("1");
-                        ir2->op1 = right;
-                    }
-                    if(same_op(left, ir2->op2)) {
-                        // Log("2");
-                        ir2->op2 = right;
-                    }
-                }
-                else if(ir2->kind == INTER_ARG || ir2->kind == INTER_RETURN || ir2->kind == INTER_WRITE || ir2->kind == INTER_READ) {
-                    if(same_op(left, ir2->op)) {
-                        ir2->op = right;
-                    }
-                }
-                else if(ir2->kind == INTER_IF_GOTO) {
-                    if(same_op(left, ir2->if_goto.op1)) {
-                        ir2->if_goto.op1 = right;
-                    }
-                    if(same_op(left, ir2->if_goto.op2)) {
-                        ir2->if_goto.op2 = right;
-                    }
-                }
-                else if(ir2->kind == INTER_CALL) {
-                    if(same_op(left, ir2->ret)) {
-                        ir2->ret = right;
-                    }
-                }
-                ir2 = ir2->next;
+            else if(ir->left->kind == VARIABLE_V || ir->left->kind == ADDRESS_V) {
+                // 找到所有v_i := t_i的，把所有的t_i换成xxx
+                if(ir->right->pre == NOTHING)
+                    replace_v(ir);
             }
         }
         ir = ir->next;
@@ -702,10 +705,10 @@ void delete_assign() {
 
 void ir_optimizer() {
     // 删除那些没有用过的变量、临时变量、label
-    delete_unused(); // 73327162 -> 65571310
+    delete_unused(); // 73327162 -> 65526747
     // 去除常数运算
     delete_const_op(); 
     // 对于那些ti := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
-    delete_assign(); // 65458548
+    delete_assign(); 
     print_all_ir();
 }

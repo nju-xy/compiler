@@ -18,7 +18,7 @@ struct Operand_ {
 typedef struct InterCode_ InterCode;
 struct InterCode_
 {
-    enum { INTER_ASSIGN, INTER_ADD, INTER_SUB, INTER_MUL, INTER_DIV, INTER_PARAM, INTER_FUNCTION, INTER_CALL, INTER_ARG, INTER_RETURN, INTER_READ, INTER_WRITE, INTER_LABEL, INTER_GOTO, INTER_IF_GOTO, INTER_DEC, INTER_LEFT_POINTER, INTER_RIGHT_POINTER, INTER_ADDR } kind; // 19个
+    enum { INTER_ASSIGN, INTER_ADD, INTER_SUB, INTER_MUL, INTER_DIV, INTER_PARAM, INTER_FUNCTION, INTER_CALL, INTER_ARG, INTER_RETURN, INTER_READ, INTER_WRITE, INTER_LABEL, INTER_GOTO, INTER_IF_GOTO, INTER_DEC, INTER_LEFT_POINTER } kind; // 17个
     union {
         Operand* op; 
         // ARG, RET, WRITE不改op
@@ -30,7 +30,7 @@ struct InterCode_
         int var_no; // PARAM
         int label; // LABEL, GOTO
         struct { Operand *op1, *op2; int label; int relop;} if_goto; // IF_GOTO
-        struct { char* func_name; Operand* ret; }; // FUNC, CALL
+        struct { Operand* ret; char* func_name; }; // FUNC, CALL
         struct { int var_no, width; } dec; // DEC
         // ...
     };
