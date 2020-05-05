@@ -34,9 +34,8 @@ Operand* semantic_write(Syntax_Tree_Node_t * node);
 
 void copy_array(Operand* op1, Operand* op2);
 Operand* exp_2_op_algorithm(Syntax_Tree_Node_t * node);
-Operand* exp_2_op_logic(Syntax_Tree_Node_t * node);
+Operand* exp_logic(Syntax_Tree_Node_t * node);
 Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node);
-Operand* exp_1_op_logic(Syntax_Tree_Node_t * node);
 int check_right_value(Syntax_Tree_Node_t* node);
 
 #endif

@@ -24,21 +24,21 @@ int new_label() {
 
 Operand* new_operand_int(int val) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
-    new_op->kind = CONSTANT_INT;
+    new_op->kind = CONSTANT;
     new_op->type = new_type_int();
     new_op->int_value = val;
     // new_op->pre = NOTHING;
     return new_op;
 }
 
-Operand* new_operand_float(float val) {
-    Operand* new_op = (Operand*)malloc(sizeof(Operand));
-    new_op->kind = CONSTANT_FLOAT;
-    new_op->type = new_type_float();
-    new_op->float_value = val;
-    // new_op->pre = NOTHING;
-    return new_op;
-}
+// Operand* new_operand_float(float val) {
+//     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+//     new_op->kind = CONSTANT_FLOAT;
+//     new_op->type = new_type_float();
+//     new_op->float_value = val;
+//     // new_op->pre = NOTHING;
+//     return new_op;
+// }
 
 Operand* new_operand_temp_var(Type* type) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
@@ -94,14 +94,14 @@ char* operand_name(Operand* op) {
         name = (char*)malloc(sizeof(char) * (sz + 3));
         sprintf(name, "V%d", op->var_no);
     }
-    else if(op->kind == CONSTANT_INT) {
+    else if(op->kind == CONSTANT) {
         name = (char*)malloc(33);
         snprintf(name, 32, "#%d", op->int_value);
     }
-    else if(op->kind == CONSTANT_FLOAT) {
-        name = (char*)malloc(65);
-        snprintf(name, 64, "#%f", op->float_value);
-    }
+    // else if(op->kind == CONSTANT_FLOAT) {
+    //     name = (char*)malloc(65);
+    //     snprintf(name, 64, "#%f", op->float_value);
+    // }
     else {
         TODO();
     }
@@ -279,18 +279,18 @@ void gen_code_goto(int label) {
 }
 
 char* relop_name(int relop) {
-    if(relop == LT) 
+    if(relop == 0) 
         return "<";
-    else if(relop == GT)
+    else if(relop == 1)
         return ">";
-    else if(relop == LE)
-        return "<=";
-    else if(relop == GE)
-        return ">=";
-    else if(relop == EQ)
-        return "==";
-    else if(relop == NE)
+    else if(relop == 2)
         return "!=";
+    else if(relop == 3)
+        return "==";
+    else if(relop == 4)
+        return "<=";
+    else if(relop == 5)
+        return ">=";
     return "NULL";
 }
 
@@ -413,19 +413,20 @@ void print_all_ir() {
 
 /*******************优化部分*******************************/
 void add_used(Operand* op, int *temp_used, int *var_used) {
-    if(op->kind == VARIABLE_V) {
+    if(op->kind == VARIABLE_V || op->kind == ADDRESS_V) {
         var_used[op->var_no] = 1;
     }
-    else if(op->kind == VARIABLE_T) {
+    else if(op->kind == VARIABLE_T || op->kind == ADDRESS_T) {
         temp_used[op->var_no] = 1;
     }
 }
 
 int unused(Operand* op, int *temp_used, int *var_used) {
-    if(op->kind == VARIABLE_V && var_used[op->var_no] == 0) {
+    // Log("%s", operand_name(op));
+    if((op->kind == VARIABLE_V || op->kind == ADDRESS_V) && var_used[op->var_no] == 0) {
         return 1;
     }
-    else if(op->kind == VARIABLE_T && temp_used[op->var_no] == 0) {
+    else if((op->kind == VARIABLE_T || op->kind == ADDRESS_T) && temp_used[op->var_no] == 0) {
         return 1;
     }
     return 0;
@@ -450,7 +451,7 @@ void delete_unused() {
     int* temp_used = (int*)malloc((temp_cnt + 1) * sizeof(int));
     int* var_used = (int*)malloc((inter_var_cnt + 1) * sizeof(int));
     int* label_used = (int*)malloc((label_cnt + 1) * sizeof(int));
-    while(1) {       
+    while(1) {
         memset(temp_used, 0, (temp_cnt + 1) * sizeof(int));
         memset(var_used, 0, (inter_var_cnt + 1) * sizeof(int));
         memset(label_used, 0, (label_cnt + 1) * sizeof(int));
@@ -459,7 +460,11 @@ void delete_unused() {
             if(ir->kind == INTER_ARG || ir->kind == INTER_WRITE || ir->kind == INTER_RETURN || ir->kind == INTER_READ) {
                 add_used(ir->op, temp_used, var_used);
             }
-            else if(ir->kind == INTER_ASSIGN || ir->kind == INTER_LEFT_POINTER || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+            else if(ir->kind == INTER_LEFT_POINTER) {
+                add_used(ir->right, temp_used, var_used);
+                add_used(ir->left, temp_used, var_used);
+            }
+            else if(ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
                 add_used(ir->right, temp_used, var_used);
             }
             else if(ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) {
@@ -482,7 +487,7 @@ void delete_unused() {
         int ret = 0;
         ir = ir_head;
         while(ir) {
-            if(ir->kind == INTER_ASSIGN || ir->kind == INTER_LEFT_POINTER || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+            if(ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
                 if(unused(ir->left, temp_used, var_used)) {
                     delete_ir(ir);
                     ret = 1;
@@ -508,6 +513,7 @@ void delete_unused() {
             }
             ir = ir->next;
         }
+        
         if(ret == 0)
             break;
     }
@@ -519,11 +525,46 @@ void delete_unused() {
 int same_op(Operand* op1, Operand* op2) {
     if(op1->kind != op2->kind)
         return 0;
-    if(op1->kind == CONSTANT_INT)
+    if(op1->kind == CONSTANT)
         return (op1->int_value == op2->int_value);
-    if(op1->kind == CONSTANT_FLOAT)
-        return (op1->float_value == op2->float_value);
+    // if(op1->kind == CONSTANT_FLOAT)
+    //     return (op1->float_value == op2->float_value);
     return (op1->var_no == op2->var_no);
+}
+
+void delete_const_op() {
+    InterCode* ir = ir_head;
+    while(ir) {
+        if(ir->kind == INTER_ADD) {
+            if(ir->op1->kind == CONSTANT && ir->op2->kind == CONSTANT) {
+                ir->kind = INTER_ASSIGN;
+                ir->left = ir->result;
+                ir->right = new_operand_int(ir->op1->int_value + ir->op2->int_value);
+            }
+        }
+        else if(ir->kind == INTER_SUB) {
+            if(ir->op1->kind == CONSTANT && ir->op2->kind == CONSTANT) {
+                ir->kind = INTER_ASSIGN;
+                ir->left = ir->result;
+                ir->right = new_operand_int(ir->op1->int_value - ir->op2->int_value);
+            }
+        }
+        else if(ir->kind == INTER_MUL) {
+            if(ir->op1->kind == CONSTANT && ir->op2->kind == CONSTANT) {
+                ir->kind = INTER_ASSIGN;
+                ir->left = ir->result;
+                ir->right = new_operand_int(ir->op1->int_value * ir->op2->int_value);
+            }
+        }
+        else if(ir->kind == INTER_DIV) {
+            if(ir->op1->kind == CONSTANT && ir->op2->kind == CONSTANT && ir->op2->int_value != 0) {
+                ir->kind = INTER_ASSIGN;
+                ir->left = ir->result;
+                ir->right = new_operand_int(ir->op1->int_value / ir->op2->int_value);
+            }
+        }
+        ir = ir->next;
+    }
 }
 
 void delete_assign() {
@@ -537,35 +578,40 @@ void delete_assign() {
                 ir = ir->next;
                 continue;
             }
-            InterCode* ir2 = ir;
+            // Log("%s", operand_name(left));
+            InterCode* ir2 = ir->next;
             while(ir2) {
                 // 终止条件
-                if((ir->kind == INTER_READ) && same_op(left, ir2->op))
+                if((ir2->kind == INTER_READ) && same_op(left, ir2->op))
                     break;
-                if((ir->kind == INTER_ASSIGN || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) && same_op(left, ir2->left))
+                if((ir2->kind == INTER_ASSIGN || ir2->kind == INTER_RIGHT_POINTER || ir2->kind == INTER_ADDR) && same_op(left, ir2->left))
                     break;
-                if((ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) && same_op(left, ir2->result))
+                if((ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) && same_op(left, ir2->result))
+                    break;
+                if(ir2->kind == INTER_GOTO || ir2->kind == INTER_IF_GOTO || ir2->kind == INTER_LABEL)
                     break;
                 // 替换
-                if(ir->kind == INTER_ASSIGN || ir->kind == INTER_LEFT_POINTER || ir->kind == INTER_RIGHT_POINTER || ir->kind == INTER_ADDR) {
+                if(ir2->kind == INTER_ASSIGN || ir2->kind == INTER_LEFT_POINTER || ir2->kind == INTER_RIGHT_POINTER || ir2->kind == INTER_ADDR) {
                     if(same_op(left, ir2->right)) {
                         ir2->right = right;
                     }
                 }
-                else if(ir->kind == INTER_ADD || ir->kind == INTER_SUB || ir->kind == INTER_MUL || ir->kind == INTER_DIV) {
+                else if(ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) {
                     if(same_op(left, ir2->op1)) {
+                        // Log("1");
                         ir2->op1 = right;
                     }
                     if(same_op(left, ir2->op2)) {
+                        // Log("2");
                         ir2->op2 = right;
                     }
                 }
-                else if(ir->kind == INTER_ARG || ir->kind == INTER_RETURN || ir->kind == INTER_WRITE || ir->kind == INTER_READ) {
+                else if(ir2->kind == INTER_ARG || ir2->kind == INTER_RETURN || ir2->kind == INTER_WRITE || ir2->kind == INTER_READ) {
                     if(same_op(left, ir2->op)) {
                         ir2->op = right;
                     }
                 }
-                else if(ir->kind == INTER_IF_GOTO) {
+                else if(ir2->kind == INTER_IF_GOTO) {
                     if(same_op(left, ir2->if_goto.op1)) {
                         ir2->if_goto.op1 = right;
                     }
@@ -573,14 +619,13 @@ void delete_assign() {
                         ir2->if_goto.op2 = right;
                     }
                 }
-                else if(ir->kind == INTER_CALL) {
+                else if(ir2->kind == INTER_CALL) {
                     if(same_op(left, ir2->ret)) {
                         ir2->ret = right;
                     }
                 }
                 ir2 = ir2->next;
             }
-            // delete_ir(ir);
         }
         ir = ir->next;
     }
@@ -589,8 +634,10 @@ void delete_assign() {
 
 void ir_optimizer() {
     // 删除那些没有用过的变量、临时变量、label
-    delete_unused(); // 77260448 -> 69511790
+    delete_unused(); // 73327162 -> 65571310
+    // 去除常数运算
+    delete_const_op(); 
     // 对于那些ti := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
-    // delete_assign();
+    delete_assign();
     print_all_ir();
 }

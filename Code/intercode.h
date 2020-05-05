@@ -4,14 +4,14 @@
 typedef struct Operand_ Operand;
 
 struct Operand_ {
-    enum { VARIABLE_V, VARIABLE_T, CONSTANT_INT, CONSTANT_FLOAT, ADDRESS_V, ADDRESS_T } kind; // 操作符本身的类型
+    enum { VARIABLE_V, VARIABLE_T, CONSTANT, ADDRESS_V, ADDRESS_T } kind; // 操作符本身的类型
     Type* type;
     // enum { NOTHING, PRE_AND, PRE_STAR } pre;
     // 操作符前面要不要加&或者*
     union {
         int var_no;
         int int_value;
-        float float_value;
+        // float float_value;
     };
 };
 
@@ -23,7 +23,7 @@ struct InterCode_
         Operand* op; 
         // ARG, RET, WRITE不改op
         // READ 改op
-        struct { Operand *right, *left; }; 
+        struct { Operand *left, *right; }; 
         // ASSIGN, RIGHT_POINTER, ADDR 改op
         // LEFT_POINTET 不改left
         struct { Operand *result, *op1, *op2; };// ADD, SUB, MUL, DIV都改result
@@ -50,7 +50,7 @@ int new_temp_no();
 int new_label();
 void intercode_init();
 char* operand_name(Operand* op);
-Operand* new_operand_float(float val);
+// Operand* new_operand_float(float val);
 Operand* new_operand_int(int val);
 Operand* new_operand_temp_var(Type* type);
 Operand* new_operand_temp_addr(Type* type);

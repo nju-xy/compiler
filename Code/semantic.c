@@ -562,15 +562,15 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "AND") == 0) {
         // Exp AND Exp
-        return exp_2_op_logic(node);
+        return exp_logic(node);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "OR") == 0) {
         // Exp OR Exp
-        return exp_2_op_logic(node);
+        return exp_logic(node);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "RELOP") == 0) {
         // Exp RELOP Exp
-        return exp_2_op_logic(node);
+        return exp_logic(node);
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "PLUS") == 0) {
         // Exp PLUS Exp
@@ -598,7 +598,7 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
     }
     else if(strcmp(node->first_child->name, "NOT") == 0) {
         // NOT Exp
-        return exp_1_op_logic(node);
+        return exp_logic(node);
     }
     else if(strcmp(node->first_child->name, "ID") == 0) {
         if(!node->first_child->next_sibling) {
@@ -668,9 +668,9 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
     else if(strcmp(node->first_child->name, "FLOAT") == 0) {
         // FLOAT
         /* LAB3 */
-        float val = node->first_child->val.type_float;
-        Operand* op = new_operand_float(val);
-        return op;
+        // float val = node->first_child->val.type_float;
+        // Operand* op = new_operand_float(val);
+        return NULL;
     }
     else if(nth_child(node, 1) && strcmp(nth_child(node, 1)->name, "DOT") == 0) {
         // Exp DOT ID
@@ -898,17 +898,24 @@ Operand* exp_2_op_algorithm(Syntax_Tree_Node_t * node) {
     return new_operand;
 }
 
-Operand* exp_2_op_logic(Syntax_Tree_Node_t * node) {
+Operand* exp_logic(Syntax_Tree_Node_t * node) {
     // 二元逻辑运算
     int B_true = new_label();
-    int B_false = new_label();
     Operand* new_op = new_operand_temp_var(new_type_int());
     // op = 0 || if exp goto B_true || label(B_true) || op = 1 || label(B_false)
-    gen_code_assign(new_op, new_operand_int(0));
-    semantic_cond(node, B_true, B_false);
-    gen_code_label(B_true);
+    // int B_false = new_label();
+    // gen_code_assign(new_op, new_operand_int(0));
+    // semantic_cond(node, B_true, B_false);
+    // gen_code_label(B_true);
+    // gen_code_assign(new_op, new_operand_int(1));
+    // gen_code_label(B_false);
+
+    // 优化为 op = 1 || if exp goto B_true || op = 0 || label(B_true)
+    int B_false = -1;
     gen_code_assign(new_op, new_operand_int(1));
-    gen_code_label(B_false);
+    semantic_cond(node, B_true, B_false);
+    gen_code_assign(new_op, new_operand_int(0));
+    gen_code_label(B_true);
     return new_op;
 }
 
@@ -926,7 +933,7 @@ Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node) {
     /* LAB3 */
     char* op_name = node->first_child->name;
     if(strcmp(op_name, "MINUS") == 0) {
-        if(operand1->kind == CONSTANT_INT || operand1->kind == CONSTANT_FLOAT) {
+        if(operand1->kind == CONSTANT) {
             operand1->int_value = - operand1->int_value;
             return operand1;
         }
@@ -935,27 +942,13 @@ Operand* exp_1_op_algorithm(Syntax_Tree_Node_t * node) {
             gen_code_minus(new_operand, new_operand_int(0), operand1);
             return new_operand;
         }
-        else {
-            Operand* new_operand = new_operand_temp_var(type1);
-            gen_code_minus(new_operand, new_operand_float(0), operand1);
-            return new_operand;
-        }
+        // else {
+        //     Operand* new_operand = new_operand_temp_var(type1);
+        //     gen_code_minus(new_operand, new_operand_float(0), operand1);
+        //     return new_operand;
+        // }
     }
     return NULL;
-}
-
-Operand* exp_1_op_logic(Syntax_Tree_Node_t * node) {
-    // 一元逻辑运算
-    int B_true = new_label();
-    int B_false = new_label();
-    Operand* new_op = new_operand_temp_var(new_type_int());
-    // op = 0 || if exp goto B_true else goto B_false || label(B_true) || op = 1 || label(B_false)
-    gen_code_assign(new_op, new_operand_int(0));
-    semantic_cond(node, B_true, B_false);
-    gen_code_label(B_true);
-    gen_code_assign(new_op, new_operand_int(1));
-    gen_code_label(B_false);
-    return new_op;
 }
 
 int check_right_value(Syntax_Tree_Node_t* node) {
