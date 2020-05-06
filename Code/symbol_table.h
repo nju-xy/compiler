@@ -2,7 +2,7 @@
 #define __SYMBOL_TABLE_H__
 
 #include "variable_type.h"
-
+#include "intercode.h"
 // 定义符号表项
 typedef struct Symbol_ Symbol;
 struct Symbol_
@@ -19,6 +19,7 @@ struct Symbol_
         Type* type;
         Func* func;
     };
+    Operand* base_op;
     Symbol* next_in_hash; // 哈希表同一个格子内的下一个符号
     Symbol* next_in_scope; // 同一个作用域里的下一个符号
 };

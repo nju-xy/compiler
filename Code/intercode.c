@@ -591,6 +591,16 @@ void delete_const_op() {
                 ir->left = ir->result;
                 ir->right = new_operand_int(ir->op1->int_value + ir->op2->int_value);
             }
+            else if(ir->op1->kind == CONSTANT && ir->op1->int_value == 0) {
+                ir->kind = INTER_ASSIGN;
+                ir->left = ir->result;
+                ir->right = ir->op2;
+            }
+            else if(ir->op2->kind == CONSTANT && ir->op2->int_value == 0) {
+                ir->kind = INTER_ASSIGN;
+                ir->left = ir->result;
+                ir->right = ir->op1;
+            }
         }
         else if(ir->kind == INTER_SUB) {
             if(ir->op1->kind == CONSTANT && ir->op2->kind == CONSTANT) {
@@ -641,13 +651,14 @@ void replace_t(InterCode* ir) {
         // 终止条件
         if((ir2->kind == INTER_READ) && same_op(left, ir2->op))
             break;
-        if((ir2->kind == INTER_ASSIGN) && same_op(left, ir2->left))
+        else if((ir2->kind == INTER_ASSIGN) && same_op(left, ir2->left))
             break;
-        if((ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) && same_op(left, ir2->result))
+        else if((ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) && same_op(left, ir2->result))
             break;
-        if(ir2->kind == INTER_GOTO || ir2->kind == INTER_IF_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN)
+        else if(ir2->kind == INTER_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN)
             break;
-
+        // else if(ir2->kind == INTER_GOTO || ir2->kind == INTER_IF_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN)
+        //     break;
         // 替换
         if(ir2->kind == INTER_ASSIGN || ir2->kind == INTER_LEFT_POINTER ) {
             if(same_op(left, ir2->right)) {
@@ -685,6 +696,8 @@ void replace_t(InterCode* ir) {
 }
 
 void delete_assign() {
+    // 去除常数运算
+    delete_const_op();
     InterCode* ir = ir_head;
     while(ir) {
         if(ir->kind == INTER_ASSIGN) {
@@ -706,9 +719,10 @@ void delete_assign() {
 void ir_optimizer() {
     // 删除那些没有用过的变量、临时变量、label
     delete_unused(); // 73327162 -> 65526747
-    // 去除常数运算
-    delete_const_op(); 
-    // 对于那些ti := b，直接将再次改变a的值之前的所有的a换成b，并且删除这句赋值
-    delete_assign(); 
+    // 优化去掉一些不必要的赋值语句
+    for(int i = 0; i < 3; ++i) {
+        delete_assign();
+    }
+    
     print_all_ir();
 }

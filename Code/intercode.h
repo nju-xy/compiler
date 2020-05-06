@@ -50,6 +50,7 @@ int new_temp_no();
 int new_label();
 void intercode_init();
 char* operand_name(Operand* op);
+Operand* copy_operand(Operand* op);
 // Operand* new_operand_float(float val);
 Operand* new_operand_int(int val);
 Operand* new_operand_temp_var(Type* type);

@@ -622,8 +622,19 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
             }
             else {
                 Operand* new_op = new_operand_var(sym->var_no, sym->type);
-                if(sym->is_param && sym->type->kind != BASIC) {
-                    new_op->kind = ADDRESS_V;
+                if(sym->is_param) {
+                    if(sym->type->kind != BASIC)
+                        new_op->kind = ADDRESS_V;
+                }
+                else if(sym->type->kind != BASIC) {
+                    if(sym->base_op) {
+                        return copy_operand(sym->base_op);
+                    }
+                    else {
+                        sym->base_op = new_operand_temp_addr(sym->type);
+                        gen_code_addr(sym->base_op, new_op);
+                        return copy_operand(sym->base_op);
+                    }
                 }
                 return new_op;
             }
@@ -871,6 +882,9 @@ Type* semantic_cond(Syntax_Tree_Node_t * node, int B_true, int B_false) {
             assert(0);
         }
         return new_type_int();
+    }
+    else if(node->first_child && strcmp(node->first_child->name, "LP") == 0) {
+        return semantic_cond(node->first_child->next_sibling, B_true, B_false);
     }
     else {
         Operand* op = semantic_Exp(node, 1);

@@ -134,6 +134,7 @@ void print_scope(Scope* head) {
 
 void add_func_into_table(Func* func, char* name) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+    sym->base_op = NULL;
     sym->name = name;
     sym->kind = symbol_FUNC;
     sym->func = func;
@@ -222,6 +223,7 @@ Symbol* find_struct_or_variable(char* name) {
 
 void add_struct_into_table(Type* type, char* name, int lineno) {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+    sym->base_op = NULL;
     sym->name = name;
     sym->kind = symbol_STRUCTURE;
     sym->is_param = 0;
@@ -321,6 +323,7 @@ Symbol* add_variable_into_table(Type* type, char* name, int lineno) {
     // Log("new variable: %s", name);
     // print_type(type);
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+    sym->base_op = NULL;
     sym->name = name;
     sym->var_no = new_var_no();
     sym->kind = symbol_VARIABLE;
