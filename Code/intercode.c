@@ -1,4 +1,7 @@
 #include "common.h"
+int temp_cnt = 0, inter_var_cnt = 0, label_cnt = 0;
+FILE * fp_intercode;
+InterCode* ir_head = NULL, * ir_tail = NULL;
 void intercode_init() {
     temp_cnt = 0;
     inter_var_cnt = 0;
@@ -84,10 +87,12 @@ void add_code(InterCode* code) {
         ir_tail->next = code;
         code->prev = ir_tail;
         ir_tail = code;
+        code->next = NULL;
     }
 }
 
 char* operand_name(Operand* op) {
+    assert(op);
     int sz = 0;
     int temp = op->var_no;
     while(temp) {
@@ -130,6 +135,7 @@ char* operand_name(Operand* op) {
 
 void gen_code_plus(Operand* op, Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_ADD;
     code->result = op;
     code->op1 = op1;
@@ -141,6 +147,7 @@ void gen_code_plus(Operand* op, Operand* op1, Operand* op2) {
 
 void gen_code_minus(Operand* op, Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_SUB;
     code->result = op;
     code->op1 = op1;
@@ -152,6 +159,7 @@ void gen_code_minus(Operand* op, Operand* op1, Operand* op2) {
 
 void gen_code_star(Operand* op, Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_MUL;
     code->result = op;
     code->op1 = op1;
@@ -163,6 +171,7 @@ void gen_code_star(Operand* op, Operand* op1, Operand* op2) {
 
 void gen_code_div(Operand* op, Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_DIV;
     code->result = op;
     code->op1 = op1;
@@ -174,6 +183,7 @@ void gen_code_div(Operand* op, Operand* op1, Operand* op2) {
 
 void gen_code_param(int var_no) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_PARAM;
     code->var_no = var_no;
     add_code(code);
@@ -183,6 +193,7 @@ void gen_code_param(int var_no) {
 
 void gen_code_func(char* func_name) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_FUNCTION;
     code->func_name = func_name;
     add_code(code);
@@ -192,6 +203,7 @@ void gen_code_func(char* func_name) {
 
 void gen_code_assign(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_ASSIGN;
     code->left = op1;
     code->right = op2; 
@@ -202,6 +214,7 @@ void gen_code_assign(Operand* op1, Operand* op2) {
 
 void gen_code_right_pointer(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_ASSIGN;
     code->left = op1;
     code->right = copy_operand(op2);
@@ -230,6 +243,7 @@ void gen_code_right_pointer(Operand* op1, Operand* op2) {
 
 void gen_code_left_pointer(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_LEFT_POINTER;
     assert(op1->kind == ADDRESS_T || op1->kind == ADDRESS_V);
     assert(op1->pre == NOTHING);
@@ -242,6 +256,7 @@ void gen_code_left_pointer(Operand* op1, Operand* op2) {
 
 void gen_code_addr(Operand* op1, Operand* op2) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_ASSIGN;
     code->left = op1;
     code->right = copy_operand(op2); 
@@ -270,6 +285,7 @@ void gen_code_addr(Operand* op1, Operand* op2) {
 
 void gen_code_call(Operand* op, char* func_name) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_CALL;
     code->func_name = func_name;
     code->ret = op;
@@ -280,6 +296,7 @@ void gen_code_call(Operand* op, char* func_name) {
 
 void gen_code_arg(Operand* op) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_ARG;
     code->op = op;
     add_code(code);
@@ -289,6 +306,7 @@ void gen_code_arg(Operand* op) {
 
 void gen_code_return(Operand* op) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_RETURN;
     code->op = op;
     add_code(code);
@@ -298,6 +316,7 @@ void gen_code_return(Operand* op) {
 
 void gen_code_read(Operand* op) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_READ;
     code->op = op;
     add_code(code);
@@ -307,6 +326,7 @@ void gen_code_read(Operand* op) {
 
 void gen_code_write(Operand* op) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_WRITE;
     code->op = op;
     add_code(code);
@@ -318,6 +338,7 @@ void gen_code_label(int label) {
     if(label <= 0)
         assert(0);
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_LABEL;
     code->label = label;
     add_code(code);
@@ -329,6 +350,7 @@ void gen_code_goto(int label) {
     if(label <= 0)
         assert(0);
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_GOTO;
     code->label = label;
     add_code(code);
@@ -356,6 +378,7 @@ void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
     if(label <= 0)
         assert(0);
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_IF_GOTO;
     code->if_goto.label = label;
     code->if_goto.relop = relop;
@@ -368,6 +391,7 @@ void gen_code_if_goto(Operand* op1, int relop, Operand* op2, int label) {
 
 void gen_code_dec(int var_no, int width) {
     InterCode* code = (InterCode*)malloc(sizeof(InterCode));
+    memset(code, 0, sizeof(InterCode));
     code->kind = INTER_DEC;
     code->dec.var_no = var_no;
     code->dec.width = width;
@@ -377,6 +401,7 @@ void gen_code_dec(int var_no, int width) {
 }
 
 void print_ir(InterCode* code) {
+    assert(code);
     switch (code->kind)
     {
     case INTER_ASSIGN: // 0
@@ -385,18 +410,26 @@ void print_ir(InterCode* code) {
         break;
     case INTER_ADD: // 1
         /* code */
+        assert(code->result->pre == NOTHING);
+        assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
         fprintf(fp_intercode, "%s := %s + %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
         break;
     case INTER_SUB: //2
         /* code */
+        assert(code->result->pre == NOTHING);
+         assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
         fprintf(fp_intercode, "%s := %s - %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
         break;
     case INTER_MUL: //3
         /* code */
+        assert(code->result->pre == NOTHING);
+         assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
         fprintf(fp_intercode, "%s := %s * %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
         break;
     case INTER_DIV: //4
         /* code */
+        assert(code->result->pre == NOTHING);
+         assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
         fprintf(fp_intercode, "%s := %s / %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
         break;
     case INTER_PARAM: //5
@@ -409,6 +442,7 @@ void print_ir(InterCode* code) {
         break;
     case INTER_CALL: //7
         /* code */
+        assert(code->ret->pre == NOTHING);
         fprintf(fp_intercode, "%s := CALL %s\n", operand_name(code->ret), code->func_name);
         break;
     case INTER_ARG: //8
@@ -425,6 +459,7 @@ void print_ir(InterCode* code) {
         break;
     case INTER_WRITE: //11
         /* code */
+        assert(code->result->pre != PRE_AND);
         fprintf(fp_intercode, "WRITE %s\n", operand_name(code->op));
         break;
     case INTER_LABEL: //12
@@ -448,14 +483,14 @@ void print_ir(InterCode* code) {
         fprintf(fp_intercode, "*%s := %s\n", operand_name(code->left), operand_name(code->right));
         break;
     default:
-        assert(0);
+        // assert(0);
         break;
     }
 }
 
 void print_all_ir() {
     InterCode* ir = ir_head;
-    while(ir != NULL) {
+    while(ir) {
         print_ir(ir);
         ir = ir->next;
     }
@@ -463,6 +498,9 @@ void print_all_ir() {
 
 /*******************优化部分*******************************/
 void add_used(Operand* op, int *temp_used, int *var_used) {
+    assert(op);
+    assert(temp_used);
+    assert(var_used);
     if(op->kind == VARIABLE_V || op->kind == ADDRESS_V) {
         var_used[op->var_no] = 1;
     }

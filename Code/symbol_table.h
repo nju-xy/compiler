@@ -19,7 +19,6 @@ struct Symbol_
         Type* type;
         Func* func;
     };
-    Operand* base_op;
     Symbol* next_in_hash; // 哈希表同一个格子内的下一个符号
     Symbol* next_in_scope; // 同一个作用域里的下一个符号
 };
@@ -32,10 +31,6 @@ struct Scope_
     Scope* next; // 下一个作用域
     Symbol* first_symbol; // 这个作用域中的首个符号
 };
-
-Scope* scope_head;
-Scope* scope_struct;
-Scope* scope_func;
 
 // 哈希
 #define SIZE_OF_HASH 0x3fff
@@ -77,7 +72,6 @@ void add_sym_into_global_table(Symbol* sym);
 // void free_fieldlist(FieldList* field);
 
 // 作用域标号
-int nr_scope;
 #define CUR_SCOPE (nr_scope - 1)
 
 #endif

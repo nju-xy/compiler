@@ -1,5 +1,5 @@
 #include "common.h"
-
+extern Scope* scope_head, * scope_struct, * scope_func;
 Type* new_type_int() {
     Type* new_int = (Type*)malloc(sizeof(Type));
     new_int->kind = BASIC;
@@ -219,8 +219,6 @@ int same_func(Func* func1, Func* func2) {
 
 int same_struct(FieldList* field1, FieldList* field2) {
     // 判断两个结构体内部是否相同（不包含名字）
-    // Log("same struct %d", cnt);
-    // cnt++;
     FieldList* p1 = field1;
     FieldList* p2 = field2;
     while(1) {

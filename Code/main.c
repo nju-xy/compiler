@@ -2,6 +2,7 @@
 
 extern int yyrestart(FILE * f);
 extern int yyparse();
+extern FILE * fp_intercode;
 
 void init() {
     error_flag = 0;

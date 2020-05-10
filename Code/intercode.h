@@ -42,9 +42,7 @@ struct InterCode_
 //     InterCode code;
 //     struct InterCodes_ *prev, *next; 
 // };
-InterCode* ir_head;
-InterCode* ir_tail;
-int temp_cnt, inter_var_cnt, label_cnt;
+
 int new_var_no();
 int new_temp_no();
 int new_label();
@@ -83,5 +81,4 @@ void gen_code_dec(int var_no, int width);
 
 void ir_optimizer();
 
-FILE * fp_intercode;
 #endif

@@ -68,6 +68,5 @@ FieldList* find_field(Type* type, char* name);
 
 void print_func_table();
 void print_struct_table();
-int cnt;
 
 #endif

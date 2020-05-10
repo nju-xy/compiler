@@ -1,4 +1,5 @@
 #include "common.h"
+extern Scope* scope_head, * scope_struct, * scope_func;
 
 void sem_error(int no, int lineno, char* err_msg) {
     printf("Error type %d at Line %d: %s.\n", no, lineno, err_msg);
@@ -482,7 +483,6 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
 }
 
 void copy_array(Operand* op1, Operand* op2) {
-    // Log("%s := %s", operand_name(op1), operand_name(op2));
     int sz = MIN(op1->type->width, op2->type->width) / 4;
     Operand* addr1 = op1;
     Operand* addr2 = op2;
@@ -627,14 +627,17 @@ Operand* semantic_Exp(Syntax_Tree_Node_t * node, int get_value) {
                         new_op->kind = ADDRESS_V;
                 }
                 else if(sym->type->kind != BASIC) {
-                    if(sym->base_op) {
-                        return copy_operand(sym->base_op);
-                    }
-                    else {
-                        sym->base_op = new_operand_temp_addr(sym->type);
-                        gen_code_addr(sym->base_op, new_op);
-                        return copy_operand(sym->base_op);
-                    }
+                    // if(sym->base_op) {
+                    //     return copy_operand(sym->base_op);
+                    // }
+                    // else {
+                        // sym->base_op = new_operand_temp_addr(sym->type);
+                        // gen_code_addr(sym->base_op, new_op);
+                        // return copy_operand(sym->base_op);
+                    //}
+                    Operand* base_op = new_operand_temp_addr(sym->type);
+                    gen_code_addr(base_op, new_op);
+                    return base_op;
                 }
                 return new_op;
             }
