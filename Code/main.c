@@ -27,6 +27,7 @@ int main(int argc, char ** argv) {
     if(!error_flag) {
         // draw_tree(root, 0);
         semantic_analyzer(root);
+        gen_code();
     }
     return 0;
 }

@@ -693,7 +693,7 @@ void replace_t(InterCode* ir) {
             break;
         else if((ir2->kind == INTER_ADD || ir2->kind == INTER_SUB || ir2->kind == INTER_MUL || ir2->kind == INTER_DIV) && same_op(left, ir2->result))
             break;
-        else if(ir2->kind == INTER_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN)
+        else if(ir2->kind == INTER_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN || ir2->kind == INTER_CALL)
             break;
         // else if(ir2->kind == INTER_GOTO || ir2->kind == INTER_IF_GOTO || ir2->kind == INTER_LABEL || ir2->kind == INTER_RETURN)
         //     break;
@@ -723,12 +723,13 @@ void replace_t(InterCode* ir) {
             if(same_op(left, ir2->if_goto.op2)) {
                 ir2->if_goto.op2 = right;
             }
+            break;
         }
-        else if(ir2->kind == INTER_CALL) {
-            if(same_op(left, ir2->ret)) {
-                ir2->ret = right;
-            }
-        }
+        // else if(ir2->kind == INTER_CALL) {
+        //     if(same_op(left, ir2->ret)) {
+        //         ir2->ret = right;
+        //     }
+        // }
         ir2 = ir2->next;
     }
 }

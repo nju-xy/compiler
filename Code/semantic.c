@@ -12,7 +12,8 @@ void semantic_analyzer(Syntax_Tree_Node_t * root) {
     check_func_table();
     // print_func_table();
     // print_struct_table();
-    ir_optimizer();
+
+    // ir_optimizer();
 }
 
 void check_func_table() {
@@ -433,9 +434,9 @@ void semantic_Dec(Syntax_Tree_Node_t * node, Type* type, int struct_para_var) {
             if(op1->type->kind == BASIC) {
                 gen_code_assign(op1, op2);
             }
-            // else if(op1->type->kind == ARRAY) {
-            //     copy_array(op1, op2);
-            // }
+            else if(op1->type->kind == ARRAY) {
+                copy_array(op1, op2);
+            }
         }
     }
     // add_variable(field->type, field->name, node->lineno, struct_para_var);
