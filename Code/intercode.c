@@ -1,6 +1,6 @@
 #include "common.h"
 int temp_cnt = 0, inter_var_cnt = 0, label_cnt = 0;
-FILE * fp_intercode;
+// FILE * fp_intercode;
 InterCode* ir_head = NULL, * ir_tail = NULL;
 void intercode_init() {
     temp_cnt = 0;
@@ -402,90 +402,90 @@ void gen_code_dec(int var_no, int width) {
 
 void print_ir(InterCode* code) {
     assert(code);
-    switch (code->kind)
-    {
-    case INTER_ASSIGN: // 0
-        /* code */
-        fprintf(fp_intercode, "%s := %s\n", operand_name(code->left), operand_name(code->right));
-        break;
-    case INTER_ADD: // 1
-        /* code */
-        assert(code->result->pre == NOTHING);
-        assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
-        fprintf(fp_intercode, "%s := %s + %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
-        break;
-    case INTER_SUB: //2
-        /* code */
-        assert(code->result->pre == NOTHING);
-         assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
-        fprintf(fp_intercode, "%s := %s - %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
-        break;
-    case INTER_MUL: //3
-        /* code */
-        assert(code->result->pre == NOTHING);
-         assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
-        fprintf(fp_intercode, "%s := %s * %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
-        break;
-    case INTER_DIV: //4
-        /* code */
-        assert(code->result->pre == NOTHING);
-         assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
-        fprintf(fp_intercode, "%s := %s / %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
-        break;
-    case INTER_PARAM: //5
-        /* code */
-        fprintf(fp_intercode, "PARAM v%d\n", code->var_no);
-        break;
-    case INTER_FUNCTION: //6
-        /* code */
-        fprintf(fp_intercode, "FUNCTION %s :\n", code->func_name);
-        break;
-    case INTER_CALL: //7
-        /* code */
-        assert(code->ret->pre == NOTHING);
-        fprintf(fp_intercode, "%s := CALL %s\n", operand_name(code->ret), code->func_name);
-        break;
-    case INTER_ARG: //8
-        /* code */
-        fprintf(fp_intercode, "ARG %s\n", operand_name(code->op));
-        break;
-    case INTER_RETURN: //9
-        /* code */
-        fprintf(fp_intercode, "RETURN %s\n", operand_name(code->op));
-        break;
-    case INTER_READ: //10
-        /* code */
-        fprintf(fp_intercode, "READ %s\n", operand_name(code->op));
-        break;
-    case INTER_WRITE: //11
-        /* code */
-        assert(code->result->pre != PRE_AND);
-        fprintf(fp_intercode, "WRITE %s\n", operand_name(code->op));
-        break;
-    case INTER_LABEL: //12
-        /* code */
-        fprintf(fp_intercode, "LABEL label%d :\n", code->label);
-        break;
-    case INTER_GOTO: //13
-        /* code */
-        fprintf(fp_intercode, "GOTO label%d\n", code->label);
-        break;
-    case INTER_IF_GOTO: //14
-        /* code */
-        fprintf(fp_intercode, "IF %s %s %s GOTO label%d\n", operand_name(code->if_goto.op1), relop_name(code->if_goto.relop), operand_name(code->if_goto.op2), code->if_goto.label);
-        break;
-    case INTER_DEC: //15
-        /* code */
-        fprintf(fp_intercode, "DEC v%d %d\n", code->dec.var_no, code->dec.width);
-        break;
-    case INTER_LEFT_POINTER: //16
-        /* code */
-        fprintf(fp_intercode, "*%s := %s\n", operand_name(code->left), operand_name(code->right));
-        break;
-    default:
-        // assert(0);
-        break;
-    }
+    // switch (code->kind)
+    // {
+    // case INTER_ASSIGN: // 0
+    //     /* code */
+    //     fprintf(fp_intercode, "%s := %s\n", operand_name(code->left), operand_name(code->right));
+    //     break;
+    // case INTER_ADD: // 1
+    //     /* code */
+    //     assert(code->result->pre == NOTHING);
+    //     assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
+    //     fprintf(fp_intercode, "%s := %s + %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
+    //     break;
+    // case INTER_SUB: //2
+    //     /* code */
+    //     assert(code->result->pre == NOTHING);
+    //      assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
+    //     fprintf(fp_intercode, "%s := %s - %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
+    //     break;
+    // case INTER_MUL: //3
+    //     /* code */
+    //     assert(code->result->pre == NOTHING);
+    //      assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
+    //     fprintf(fp_intercode, "%s := %s * %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
+    //     break;
+    // case INTER_DIV: //4
+    //     /* code */
+    //     assert(code->result->pre == NOTHING);
+    //      assert(code->op1->pre != PRE_AND || code->op2->pre != PRE_AND);
+    //     fprintf(fp_intercode, "%s := %s / %s\n", operand_name(code->result), operand_name(code->op1), operand_name(code->op2));
+    //     break;
+    // case INTER_PARAM: //5
+    //     /* code */
+    //     fprintf(fp_intercode, "PARAM v%d\n", code->var_no);
+    //     break;
+    // case INTER_FUNCTION: //6
+    //     /* code */
+    //     fprintf(fp_intercode, "FUNCTION %s :\n", code->func_name);
+    //     break;
+    // case INTER_CALL: //7
+    //     /* code */
+    //     assert(code->ret->pre == NOTHING);
+    //     fprintf(fp_intercode, "%s := CALL %s\n", operand_name(code->ret), code->func_name);
+    //     break;
+    // case INTER_ARG: //8
+    //     /* code */
+    //     fprintf(fp_intercode, "ARG %s\n", operand_name(code->op));
+    //     break;
+    // case INTER_RETURN: //9
+    //     /* code */
+    //     fprintf(fp_intercode, "RETURN %s\n", operand_name(code->op));
+    //     break;
+    // case INTER_READ: //10
+    //     /* code */
+    //     fprintf(fp_intercode, "READ %s\n", operand_name(code->op));
+    //     break;
+    // case INTER_WRITE: //11
+    //     /* code */
+    //     assert(code->result->pre != PRE_AND);
+    //     fprintf(fp_intercode, "WRITE %s\n", operand_name(code->op));
+    //     break;
+    // case INTER_LABEL: //12
+    //     /* code */
+    //     fprintf(fp_intercode, "LABEL label%d :\n", code->label);
+    //     break;
+    // case INTER_GOTO: //13
+    //     /* code */
+    //     fprintf(fp_intercode, "GOTO label%d\n", code->label);
+    //     break;
+    // case INTER_IF_GOTO: //14
+    //     /* code */
+    //     fprintf(fp_intercode, "IF %s %s %s GOTO label%d\n", operand_name(code->if_goto.op1), relop_name(code->if_goto.relop), operand_name(code->if_goto.op2), code->if_goto.label);
+    //     break;
+    // case INTER_DEC: //15
+    //     /* code */
+    //     fprintf(fp_intercode, "DEC v%d %d\n", code->dec.var_no, code->dec.width);
+    //     break;
+    // case INTER_LEFT_POINTER: //16
+    //     /* code */
+    //     fprintf(fp_intercode, "*%s := %s\n", operand_name(code->left), operand_name(code->right));
+    //     break;
+    // default:
+    //     // assert(0);
+    //     break;
+    // }
 }
 
 void print_all_ir() {
