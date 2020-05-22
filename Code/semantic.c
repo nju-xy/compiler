@@ -456,6 +456,16 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
     if(!op_type || !same_type(op_type, para->type)) {
         return 0;
     }
+    Operand* arg_op = op;
+    if(op->kind != ADDRESS_T && op->kind != ADDRESS_V && op->type->kind != BASIC) {
+        arg_op = new_operand_temp_addr(op_type);
+        gen_code_addr(arg_op, op);
+    }
+    else if((op->kind == ADDRESS_T || op->kind == ADDRESS_V) && op->type->kind == BASIC) {
+        arg_op = new_operand_temp_addr(op_type);
+        gen_code_right_pointer(arg_op, op);
+    }
+    
     int ret = 1;
     if(nth_child(node, 1)) { // Exp COMMA Args
         // 后面的匹配了就是匹配了
@@ -467,19 +477,21 @@ int semantic_Args(Syntax_Tree_Node_t * node, FieldList* para) {
             return 0;
         }
     }
-    if(op->kind != ADDRESS_T && op->kind != ADDRESS_V && op->type->kind != BASIC) {
-        Operand* op_addr = new_operand_temp_addr(op_type);
-        gen_code_addr(op_addr, op);
-        gen_code_arg(op_addr);
-    }
-    else if((op->kind == ADDRESS_T || op->kind == ADDRESS_V) && op->type->kind == BASIC) {
-        Operand* op_val = new_operand_temp_addr(op_type);
-        gen_code_right_pointer(op_val, op);
-        gen_code_arg(op_val);
-    }
-    else {
-        gen_code_arg(op);
-    }
+
+    gen_code_arg(arg_op);
+    // if(op->kind != ADDRESS_T && op->kind != ADDRESS_V && op->type->kind != BASIC) {
+    //     Operand* op_addr = new_operand_temp_addr(op_type);
+    //     gen_code_addr(op_addr, op);
+    //     gen_code_arg(op_addr);
+    // }
+    // else if((op->kind == ADDRESS_T || op->kind == ADDRESS_V) && op->type->kind == BASIC) {
+    //     Operand* op_val = new_operand_temp_addr(op_type);
+    //     gen_code_right_pointer(op_val, op);
+    //     gen_code_arg(op_val);
+    // }
+    // else {
+    //     gen_code_arg(op);
+    // }
     return ret;
 }
 

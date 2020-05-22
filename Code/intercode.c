@@ -27,6 +27,8 @@ int new_label() {
 
 Operand* new_operand_int(int val) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    // new_op->pa_func = NULL;
+    // new_op->offset = -1;
     new_op->kind = CONSTANT;
     new_op->type = new_type_int();
     new_op->int_value = val;
@@ -36,6 +38,8 @@ Operand* new_operand_int(int val) {
 
 Operand* copy_operand(Operand* op) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    // new_op->pa_func = NULL;
+    // new_op->offset = -1;
     new_op->kind = op->kind;
     new_op->type = op->type;
     new_op->int_value = op->int_value;
@@ -45,6 +49,8 @@ Operand* copy_operand(Operand* op) {
 
 // Operand* new_operand_float(float val) {
 //     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+//     new_op->pa_func = NULL;
+//     new_op->offset = -1;
 //     new_op->kind = CONSTANT_FLOAT;
 //     new_op->type = new_type_float();
 //     new_op->float_value = val;
@@ -54,6 +60,8 @@ Operand* copy_operand(Operand* op) {
 
 Operand* new_operand_temp_var(Type* type) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    // new_op->pa_func = NULL;
+    // new_op->offset = -1;
     new_op->kind = VARIABLE_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
@@ -63,6 +71,8 @@ Operand* new_operand_temp_var(Type* type) {
 
 Operand* new_operand_temp_addr(Type* type) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    // new_op->pa_func = NULL;
+    // new_op->offset = -1;
     new_op->kind = ADDRESS_T;
     new_op->type = type;
     new_op->var_no = new_temp_no();
@@ -72,6 +82,8 @@ Operand* new_operand_temp_addr(Type* type) {
 
 Operand* new_operand_var(int var_no, Type* type) {
     Operand* new_op = (Operand*)malloc(sizeof(Operand));
+    // new_op->pa_func = NULL;
+    // new_op->offset = -1;
     new_op->kind = VARIABLE_V;
     new_op->type = type;
     new_op->var_no = var_no;
@@ -196,6 +208,7 @@ void gen_code_func(char* func_name) {
     memset(code, 0, sizeof(InterCode));
     code->kind = INTER_FUNCTION;
     code->func_name = func_name;
+
     add_code(code);
     //Log("FUNCTION %s :", func_name);
     // fprintf(fp_intercode, "FUNCTION %s :\n", code->func_name);

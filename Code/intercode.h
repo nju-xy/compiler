@@ -1,11 +1,18 @@
 #ifndef __INTERCODE_H__
 #define __INTERCODE_H__
 
-typedef struct Operand_ Operand;
+typedef struct ir_func_ ir_func;
+struct ir_func_
+{
+    int n_param; // 参数的数量
+    int var_off; // 临时变量的最大偏移量，从$fp(参数后面)开始奇数
+};
 
+typedef struct Operand_ Operand;
 struct Operand_ {
     enum { VARIABLE_V, VARIABLE_T, CONSTANT, ADDRESS_V, ADDRESS_T } kind; // 操作符本身的类型
     Type* type;
+    // ir_func* pa_func;
     union {
         int var_no;
         int int_value;
@@ -14,6 +21,7 @@ struct Operand_ {
     // 操作符前面要不要加&或者*
     enum { NOTHING, PRE_AND, PRE_STAR } pre;
 };
+
 
 typedef struct InterCode_ InterCode;
 struct InterCode_
