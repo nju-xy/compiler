@@ -6,6 +6,7 @@ extern int temp_cnt, inter_var_cnt;
 ir_func* cur_func = NULL;
 int* v_offset, *t_offset;
 ir_func** v_func, **t_func;
+ir_func* func_head = NULL;
 
 void mips_head() {
     // 数据段
@@ -17,38 +18,17 @@ void mips_head() {
     fprintf(fp_mips, "write:\n  li $v0, 1\n  syscall\n  li $v0, 4\n  la $a0, _ret\n  syscall\n  move $v0, $0\n  jr $ra\n");
 }
 
-void gen_mips() {
-    v_offset = (int*)malloc(sizeof(int) * (inter_var_cnt + 1));
-    memset(v_offset, 0, sizeof(int) * (inter_var_cnt + 1));
-    t_offset = (int*)malloc(sizeof(int) * (temp_cnt + 1));
-    memset(t_offset, 0, sizeof(int) * (temp_cnt + 1));
-    v_func = (ir_func**)malloc(sizeof(ir_func*) * (inter_var_cnt + 1));
-    memset(v_func, 0, sizeof(ir_func*) * (inter_var_cnt + 1));
-    t_func = (ir_func**)malloc(sizeof(ir_func*) * (temp_cnt + 1));
-    memset(t_func, 0, sizeof(ir_func*) * (temp_cnt + 1));
-
-
-    mips_head();
-    InterCode* ir = ir_head;
-    while(ir) {
-        mips_text(ir);
-        ir = ir->next;
-    }
-}
-
-// int getReg(Operand* op) {
-// }
-
 int mips_offset(int t_or_v, int var_no, int size) {
     if(t_or_v == 1) {
         if(v_offset[var_no] != 0) {
+            if(v_func[var_no] != cur_func)
+                Log("v%d: %d, %s %s", var_no, v_offset[var_no], v_func[var_no]->name, cur_func->name);
             assert(v_func[var_no] == cur_func);
             return v_offset[var_no];
         }
         v_func[var_no] = cur_func;
         cur_func->var_off += size;
         v_offset[var_no] = cur_func->var_off;
-        fprintf(fp_mips, "  addi $sp, $sp, -%d\n", size);
         return v_offset[var_no];
     }
     else {
@@ -59,70 +39,173 @@ int mips_offset(int t_or_v, int var_no, int size) {
         t_func[var_no] = cur_func;
         cur_func->var_off += size;
         t_offset[var_no] = cur_func->var_off;
-        fprintf(fp_mips, "  addi $sp, $sp, -%d\n", size);
         return t_offset[var_no];
     }
 }
 
-void mips_ld(Operand* op, int reg_no) {
+void mips_v_t_offset(Operand* op) {
     if(op->kind == VARIABLE_T || op->kind == ADDRESS_T)
         mips_offset(0, op->var_no, 4); // 先计算偏移量
     else if(op->kind == VARIABLE_V || op->kind == ADDRESS_V)
         mips_offset(1, op->var_no, 4); // 先计算偏移量
+}
+
+void cal_offset() {
+    func_head = (ir_func*)malloc(sizeof(ir_func));
+    func_head->next = NULL;
+    cur_func = func_head;
+    InterCode* ir = ir_head;
+    while(ir) {
+        switch (ir->kind)
+        {
+            case INTER_RETURN:
+            case INTER_READ:
+            case INTER_WRITE:
+            case INTER_ARG: { 
+                mips_v_t_offset(ir->op);
+                break;
+            }
+            case INTER_LEFT_POINTER:
+            case INTER_ASSIGN: {
+                mips_v_t_offset(ir->right);
+                mips_v_t_offset(ir->left);
+                break;
+            }
+            case INTER_ADD:
+            case INTER_SUB:
+            case INTER_MUL:
+            case INTER_DIV: {
+                mips_v_t_offset(ir->op1);
+                mips_v_t_offset(ir->op2);
+                mips_v_t_offset(ir->result);
+                break;
+            }
+            case INTER_PARAM: {
+                mips_offset(1, ir->var_no, 4);
+                // cur_func->n_param ++;
+                break;
+            }
+            case INTER_IF_GOTO: {
+                mips_v_t_offset(ir->if_goto.op1);
+                mips_v_t_offset(ir->if_goto.op2);
+                break;
+            }
+            case INTER_FUNCTION: {
+                ir_func* new_func = (ir_func*)malloc(sizeof(ir_func));
+                cur_func->next = new_func;
+                cur_func = new_func;
+                cur_func->n_param = 0;
+                cur_func->var_off = 8;
+                cur_func->name = ir->func_name;
+                break;
+            }
+            case INTER_CALL: {
+                mips_v_t_offset(ir->ret);
+                break;
+            }
+            case INTER_DEC: {
+                mips_offset(1, ir->dec.var_no, ir->dec.width);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+        ir = ir->next;
+    }
+}
+
+void gen_mips() {
+    v_offset = (int*)malloc(sizeof(int) * (inter_var_cnt + 1));
+    memset(v_offset, 0, sizeof(int) * (inter_var_cnt + 1));
+    t_offset = (int*)malloc(sizeof(int) * (temp_cnt + 1));
+    memset(t_offset, 0, sizeof(int) * (temp_cnt + 1));
+    v_func = (ir_func**)malloc(sizeof(ir_func*) * (inter_var_cnt + 1));
+    memset(v_func, 0, sizeof(ir_func*) * (inter_var_cnt + 1));
+    t_func = (ir_func**)malloc(sizeof(ir_func*) * (temp_cnt + 1));
+    memset(t_func, 0, sizeof(ir_func*) * (temp_cnt + 1));
+    mips_head();
+    cal_offset();
+
+    cur_func = func_head;
+    InterCode* ir = ir_head;
+    while(ir) {
+        mips_text(ir);
+        ir = ir->next;
+    }
+}
+
+
+void mips_ld(Operand* op, int reg_no) {
     if(op->pre == NOTHING) { // x
         if(op->kind == CONSTANT) {
             fprintf(fp_mips, "  li $t%d, %d\n", reg_no, op->int_value);
         }
         else if (op->kind == VARIABLE_T || op->kind == ADDRESS_T)
         {
+            assert(t_offset[op->var_no] != 0);
             fprintf(fp_mips, "  lw $t%d, %d($fp)\n", reg_no, -t_offset[op->var_no]);
         }
         else if (op->kind == VARIABLE_V || op->kind == ADDRESS_V)
         {
+            assert(v_offset[op->var_no] != 0);
             fprintf(fp_mips, "  lw $t%d, %d($fp)\n", reg_no, -v_offset[op->var_no]);
         }
     }
     else if(op->pre == PRE_AND) { // &x
-        if (op->kind == VARIABLE_T)
+        if (op->kind == ADDRESS_T)
         {
+            assert(t_offset[op->var_no] != 0);
             fprintf(fp_mips, "  la $t%d, %d($fp)\n", reg_no, -t_offset[op->var_no]);
         }
-        else if (op->kind == VARIABLE_V)
+        else if (op->kind == ADDRESS_V)
         {
+            assert(v_offset[op->var_no] != 0);
             fprintf(fp_mips, "  la $t%d, %d($fp)\n", reg_no, -v_offset[op->var_no]);
         }
         else {
+            printf("%d %d\n", op->kind, op->var_no);
             assert(0);
         }
     }
     else { // *x
-        if (op->kind == VARIABLE_T || op->kind == ADDRESS_T)
+        if (op->kind == VARIABLE_T)
         {
+            assert(t_offset[op->var_no] != 0);
             fprintf(fp_mips, "  lw $t%d, %d($fp)\n", reg_no, -t_offset[op->var_no]); // lw reg1 b
             fprintf(fp_mips, "  lw $t%d, 0($t%d)\n", reg_no, reg_no);// lw reg1 0(reg1)
         }
-        else if (op->kind == VARIABLE_V || op->kind == ADDRESS_V)
+        else if (op->kind == VARIABLE_V)
         {
+            assert(v_offset[op->var_no] != 0);
             fprintf(fp_mips, "  lw $t%d, %d($fp)\n", reg_no, -v_offset[op->var_no]); // lw reg1 b
             fprintf(fp_mips, "  lw $t%d, 0($t%d)\n", reg_no, reg_no);// lw reg1 0(reg1)
         }
         else {
+            printf("%d %d\n", op->kind, op->var_no);
             assert(0);
         }
     }
 }
 
 void mips_st(Operand* op, int reg_no){
-    if(op->kind == VARIABLE_T) {
+    if(op->pre != NOTHING) {
+        printf("%d %d %d\n", op->pre, op->kind, op->var_no);
+        assert(0);
+    }
+    if(op->kind == VARIABLE_T || op->kind == ADDRESS_T) {
+        assert(t_offset[op->var_no] != 0);
         mips_offset(0, op->var_no, 4);
         fprintf(fp_mips, "  sw $t%d, %d($fp)\n", reg_no, -t_offset[op->var_no]);
     }
-    else if (op->kind == VARIABLE_V)
+    else if (op->kind == VARIABLE_V || op->kind == ADDRESS_V)
     {
+        assert(v_offset[op->var_no] != 0);
         mips_offset(1, op->var_no, 4);
         fprintf(fp_mips, "  sw $t%d, %d($fp)\n", reg_no, -v_offset[op->var_no]);
     }
     else {
+        printf("%d %d\n", op->kind, op->var_no);
         TODO();
     }
 }
@@ -171,18 +254,26 @@ void mips_text(InterCode* ir) {
         }
         case INTER_FUNCTION: {
             // f:
-            fprintf(fp_mips, "\n%s:\n", ir->func_name);
-            fprintf(fp_mips, "  addi $fp, $sp, 8\n"); // $fp = $sp - 8
-            cur_func = (ir_func*)malloc(sizeof(ir_func));
-            cur_func->n_param = 0;
-            cur_func->var_off = 8;
+            cur_func = cur_func->next;
+            if(strcmp(ir->func_name, "main") == 0)
+                fprintf(fp_mips, "\n%s:\n", ir->func_name);
+            else 
+                fprintf(fp_mips, "\nfunc_%s:\n", ir->func_name);
+            fprintf(fp_mips, "  addi $fp, $sp, 8\n"); // $fp = $sp + 8
+            
+            fprintf(fp_mips, "  li $t1, -%d\n", cur_func->var_off); 
+            fprintf(fp_mips, "  add $sp, $fp, $t1\n"); // 为这个函数中的局部变量临时变量申请栈中的空间
+            // fprintf(fp_mips, "  addi $sp, $fp, %d\n", cur_func->var_off);
             break;
         }
         case INTER_CALL: {
             fprintf(fp_mips, "  addi $sp, $sp, -8\n");
             fprintf(fp_mips, "  sw $ra, 0($sp)\n");// 保存原$ra至栈中
             fprintf(fp_mips, "  sw $fp, 4($sp)\n");// 保存原$fp至栈中
-            fprintf(fp_mips, "  jal %s\n", ir->func_name);// jal f (jal会自动把下个指令的地址存到$ra中)
+            if(strcmp(ir->func_name, "main") == 0)
+                fprintf(fp_mips, "  jal %s\n", ir->func_name);
+            else    
+                fprintf(fp_mips, "  jal func_%s\n", ir->func_name);// jal f (jal会自动把下个指令的地址存到$ra中)
             fprintf(fp_mips, "  lw $fp, 4($sp)\n"); // 从栈中恢复原$fp
             fprintf(fp_mips, "  lw $ra, 0($sp)\n"); // 从栈中恢复原$ra
             fprintf(fp_mips, "  addi $sp, $sp, 8\n"); // 此时$sp = $fp
@@ -201,9 +292,9 @@ void mips_text(InterCode* ir) {
         }
         case INTER_PARAM: { // PARAM x
             fprintf(fp_mips, "  lw $t1, %d($fp)\n", 4 * cur_func->n_param); // 从栈里找到参数
+            cur_func->n_param ++;
             int off = mips_offset(1, ir->var_no, 4);
             fprintf(fp_mips, "  sw $t1, %d($fp)\n", -off);// 把参数存到x
-            cur_func->n_param ++;
             break;
         }
         case INTER_RETURN: {
@@ -268,8 +359,7 @@ void mips_text(InterCode* ir) {
                 assert(0);
             break;
         }
-        case INTER_DEC: {
-            mips_offset(1, ir->dec.var_no, ir->dec.width);
+        case INTER_DEC: { // 之前用了
             break;
         }
         case INTER_LEFT_POINTER: {

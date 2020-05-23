@@ -4,8 +4,10 @@
 typedef struct ir_func_ ir_func;
 struct ir_func_
 {
+    char* name;
     int n_param; // 参数的数量
     int var_off; // 临时变量的最大偏移量，从$fp(参数后面)开始奇数
+    struct ir_func_* next;
 };
 
 typedef struct Operand_ Operand;
@@ -38,7 +40,7 @@ struct InterCode_
         int var_no; // PARAM
         int label; // LABEL, GOTO
         struct { Operand *op1, *op2; int label; int relop;} if_goto; // IF_GOTO
-        struct { Operand* ret; char* func_name; }; // FUNC, CALL
+        struct { Operand* ret; char* func_name; }; // FUNC, CALL, 其中FUNC不需要ret
         struct { int var_no, width; } dec; // DEC
         // ...
     };
