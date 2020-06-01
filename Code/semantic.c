@@ -13,7 +13,7 @@ void semantic_analyzer(Syntax_Tree_Node_t * root) {
     // print_func_table();
     // print_struct_table();
 
-    // ir_optimizer();
+    ir_optimizer();
 }
 
 void check_func_table() {

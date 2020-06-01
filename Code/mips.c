@@ -14,8 +14,18 @@ void mips_head() {
     fprintf(fp_mips, ".globl main\n");
     // 代码段
     fprintf(fp_mips, ".text\n");
-    fprintf(fp_mips, "read:\n  li $v0, 4\n  la $a0, _prompt\n  syscall\n  li $v0, 5\n  syscall\n  jr $ra\n\n");
-    fprintf(fp_mips, "write:\n  li $v0, 1\n  syscall\n  li $v0, 4\n  la $a0, _ret\n  syscall\n  move $v0, $0\n  jr $ra\n");
+    // read
+    fprintf(fp_mips, "read:\n");
+    
+    // 为了测试，可以先删了这行，记住交的时候加上
+    fprintf(fp_mips, "  li $v0, 4\n  la $a0, _prompt\n  syscall\n"); // 提示
+    
+    fprintf(fp_mips, "  li $v0, 5\n  syscall\n  jr $ra\n\n"); // 读入
+    // write
+    fprintf(fp_mips, "write:\n");
+    fprintf(fp_mips, "  li $v0, 1\n  syscall\n"); // 输出
+    fprintf(fp_mips, "  li $v0, 4\n  la $a0, _ret\n  syscall\n"); // 换行
+    fprintf(fp_mips, "  move $v0, $0\n  jr $ra\n"); // 返回0
 }
 
 int mips_offset(int t_or_v, int var_no, int size) {
@@ -82,7 +92,6 @@ void cal_offset() {
             }
             case INTER_PARAM: {
                 mips_offset(1, ir->var_no, 4);
-                // cur_func->n_param ++;
                 break;
             }
             case INTER_IF_GOTO: {

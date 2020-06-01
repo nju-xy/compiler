@@ -6,6 +6,8 @@
         "ostream": "c",
         "tuple": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "common.h": "c",
+        "typeinfo": "c"
     }
 }
