@@ -103,11 +103,11 @@ label4:
   lw $t1, -24($fp)
   move $a0, $t1
   addi $sp, $sp, -4
-  sw $ra 0($sp)
+  sw $ra, 0($sp)
   jal write
-  lw $ra 0($sp)
+  lw $ra, 0($sp)
   addi $sp, $sp, 4
-  move $v0 $0
+  move $v0, $0
   li $t1, 0
   move $v0, $t1
   addi $sp, $fp, -8

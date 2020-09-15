@@ -330,11 +330,11 @@ void mips_text(InterCode* ir) {
             mips_ld(ir->op, 1); // lw $t1 x
             fprintf(fp_mips, "  move $a0, $t1\n"); // move a0 x
             fprintf(fp_mips, "  addi $sp, $sp, -4\n"); // addi $sp, $sp, -4
-            fprintf(fp_mips, "  sw $ra 0($sp)\n"); // sw $ra 0($sp)
+            fprintf(fp_mips, "  sw $ra, 0($sp)\n"); // sw $ra 0($sp)
             fprintf(fp_mips, "  jal write\n"); // jal write
-            fprintf(fp_mips, "  lw $ra 0($sp)\n"); // lw $ra 0($sp)
+            fprintf(fp_mips, "  lw $ra, 0($sp)\n"); // lw $ra 0($sp)
             fprintf(fp_mips, "  addi $sp, $sp, 4\n"); // addi $sp, $sp, 4
-            fprintf(fp_mips, "  move $v0 $0\n"); // move $v0 $0
+            fprintf(fp_mips, "  move $v0, $0\n"); // move $v0 $0
             break;
         }
         case INTER_LABEL: {
